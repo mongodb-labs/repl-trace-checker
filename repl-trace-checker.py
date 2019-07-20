@@ -1,5 +1,4 @@
 import argparse
-import heapq
 import logging
 import os
 import pickle
@@ -8,7 +7,7 @@ from os.path import getmtime
 
 import parse_dot
 import parse_log
-from system_state import PortMapper, SystemState, OplogIndexMapper
+from system_state import OplogIndexMapper, PortMapper, SystemState
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -32,15 +31,14 @@ def load_graph(args):
             and getmtime(cache_file_name) > getmtime(args.dotfile.name)):
         logging.info(f"Loading cached {cache_file_name}")
         graph = pickle.load(open(cache_file_name, 'rb'))
-        logging.info("Done loading")
-        return graph
+    else:
+        logging.info(f"Loading {args.dotfile.name}")
+        graph = parse_dot.parse_dot(args.dotfile)
+        logging.info("Caching graph")
+        with open('state_graph.pickle', 'wb') as f:
+            pickle.dump(graph, f)
 
-    logging.info(f"Parsing {args.dotfile.name}")
-    graph = parse_dot.parse_dot(args.dotfile)
-    logging.info("Caching graph")
-    with open('state_graph.pickle', 'wb') as f:
-        pickle.dump(graph, f)
-
+    logging.info(f"Loaded {graph}")
     return graph
 
 
@@ -66,46 +64,38 @@ def update_state(current_state, log_event):
 
 def main(args):
     graph = load_graph(args)
-    current_state = graph.init_state
+    current_state = graph.get_init_state()
     port_mapper = PortMapper()
     oplog_index_mapper = OplogIndexMapper()
-    logfile_streams = (
-        parse_log.parse_log(logfile_stream, port_mapper, oplog_index_mapper)
-        for logfile_stream in args.logfile)
-
-    # Merge logs, sorting by timestamp.
-    log_events = heapq.merge(
-        *logfile_streams, key=lambda event: event.timestamp)
-
-    for log_event in log_events:
-        logging.info(current_state)
-        logging.info(log_event)
+    for log_line in parse_log.merge_log_streams(args.logfile):
+        log_event = parse_log.parse_log_line(
+            log_line, port_mapper, oplog_index_mapper)
+        state_id = graph.get_state_id(current_state)
+        logging.info(f'State id {state_id}: {current_state.pretty()}')
+        logging.info(log_event.pretty())
         next_state = update_state(current_state, log_event)
-        try:
-            allowed_states = graph.next_states(current_state, log_event.action)
-        except KeyError:
-            actions = graph.next_actions(current_state)
-            if actions:
-                logging.error(
-                    f"No {log_event.action} action from current state")
-                logging.error("Enabled actions:")
-                for action in actions:
-                    logging.error(action)
-            else:
-                logging.error("No actions enabled from current state")
+        next_actions = graph.next_actions(current_state)
+        if not next_actions:
+            logging.error(f"No allowed next actions after state id {state_id}!")
             sys.exit(1)
 
+        if log_event.action not in next_actions:
+            logging.error(f"Next action not in allowed next actions:"
+                          f" {', '.join(next_actions)}")
+            sys.exit(1)
+
+        allowed_states = graph.next_states(current_state, log_event.action)
+
         if not allowed_states:
-            logging.error(f"Next state: {next_state}")
-            logging.error("No allowed next states!")
+            logging.error(f"Next state: {next_state.pretty()}")
+            logging.error(f"No allowed next states after state id {state_id}!")
             sys.exit(1)
         elif next_state not in allowed_states:
             logging.error("Next state not in allowed next states")
-            logging.error("Next state:")
-            logging.error(next_state)
+            logging.error(f"Next state: {next_state.pretty()}")
             logging.error("Allowed states:")
             for state in allowed_states:
-                logging.error(state)
+                logging.error(state.pretty())
 
             sys.exit(1)
 

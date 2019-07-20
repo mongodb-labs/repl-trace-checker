@@ -1,14 +1,17 @@
-from dataclasses import dataclass
 from typing import Tuple
 
+from bson import Timestamp
 
-@dataclass(unsafe_hash=True)
+from repl_checker_dataclass import repl_checker_dataclass
+
+
+@repl_checker_dataclass(unsafe_hash=True)
 class OplogEntry:
     term: int
     index: int
 
 
-@dataclass(unsafe_hash=True)
+@repl_checker_dataclass(unsafe_hash=True)
 class SystemState:
     n_servers: int
 
@@ -32,6 +35,7 @@ class SystemState:
 
 class PortMapper:
     """Maps port numbers to server ids, 0-indexed."""
+
     def __init__(self):
         self.port_to_server = {}
         self.next_server_id = 0
@@ -46,13 +50,15 @@ class PortMapper:
 
 class OplogIndexMapper:
     """Maps MongoDB oplog timestamps to TLA+ log indexes, 0-indexed."""
+
     def __init__(self):
-        self.timestamp_to_index = {}
-        self.next_index = 0
+        self._ts_to_index = {Timestamp(0, 0): 0}
+
+    def set_index(self, timestamp, index):
+        if timestamp in self._ts_to_index:
+            assert self._ts_to_index[timestamp] == index
+        else:
+            self._ts_to_index[timestamp] = index
 
     def get_index(self, timestamp):
-        if timestamp not in self.timestamp_to_index:
-            self.timestamp_to_index[timestamp] = self.next_index
-            self.next_index += 1
-
-        return self.timestamp_to_index[timestamp]
+        return self._ts_to_index[timestamp]
