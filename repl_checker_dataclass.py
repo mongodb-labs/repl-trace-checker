@@ -1,16 +1,29 @@
 import dataclasses
+import textwrap
+
+from jinja2 import Template
 
 
 def repl_checker_dataclass(_cls=None, **kwargs):
     def wrap(cls):
         wrapped = dataclasses.dataclass(cls, **kwargs)
 
-        def pretty(self):
-            field_len = max(len(f.name) for f in dataclasses.fields(self))
-            attrs = '\n'.join(f"{name + ':':{field_len + 1}} {value}" for name, value in
-                              dataclasses.asdict(self).items())
+        if hasattr(wrapped, '__pretty_template__'):
+            template = Template(wrapped.__pretty_template__)
 
-            return f'{cls.__name__}\n{attrs}'
+            def pretty(self):
+                return textwrap.indent(template.render(
+                    dataclasses.asdict(self), trim_blocks=True,
+                    lstrip_blocks=True), '  ')
+
+        else:
+            def pretty(self):
+                field_len = max(len(f.name) for f in dataclasses.fields(self))
+                attrs = '\n'.join(
+                    f"{name + ':':{field_len + 1}} {value}" for name, value in
+                    dataclasses.asdict(self).items())
+
+                return f'{cls.__name__}\n{attrs}'
 
         wrapped.pretty = pretty
         return wrapped

@@ -32,6 +32,21 @@ class SystemState:
         assert len(self.server_state) == self.n_servers
         assert len(self.commit_point) == self.n_servers
 
+    __pretty_template__ = """global term:   {{ global_current_term }}
+server states: {{ server_state | join(' ') }}
+commit points:
+{% for server_commit_point in commit_point -%}
+{{ loop.index }}: {{ server_commit_point }}
+{% endfor -%}
+logs:
+{%- for server_log in log %}
+{{ loop.index }}: {% if server_log -%}
+{{ server_log | join(' ') }}
+{%- else -%}
+empty
+{%- endif -%}
+{%- endfor -%}"""
+
 
 class PortMapper:
     """Maps port numbers to server ids, 0-indexed."""

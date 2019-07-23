@@ -72,6 +72,11 @@ class LogEvent:
     commit_point: OplogEntry
     log: tuple
 
+    __pretty_template__ = """{{ location }} {{ timestamp }}
+{{ action }} server_id={{ server_id }} state={{ server_state }} term={{ term }}
+commit point: {{ commit_point }}
+log: {{ log | join(', ') }}"""
+
 
 def parse_oplog(obj, oplog_index_mapper):
     """Parse a TLA+ oplog from a JSON-parsed mongod log message.

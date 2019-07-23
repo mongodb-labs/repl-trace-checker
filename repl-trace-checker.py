@@ -10,7 +10,7 @@ import parse_log
 from system_state import OplogIndexMapper, PortMapper, SystemState
 
 logging.basicConfig(
-    format='%(asctime)s %(levelname)-8s %(message)s',
+    format='%(levelname)-8s %(message)s',
     level=logging.INFO,
     datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -71,8 +71,8 @@ def main(args):
         log_event = parse_log.parse_log_line(
             log_line, port_mapper, oplog_index_mapper)
         state_id = graph.get_state_id(current_state)
-        logging.info(f'State id {state_id}: {current_state.pretty()}')
-        logging.info(log_event.pretty())
+        logging.info(f'State id {state_id}:\n{current_state.pretty()}')
+        logging.info(f'Log line:\n{log_event.pretty()}')
         next_state = update_state(current_state, log_event)
         next_actions = graph.next_actions(current_state)
         if not next_actions:
@@ -87,15 +87,14 @@ def main(args):
         allowed_states = graph.next_states(current_state, log_event.action)
 
         if not allowed_states:
-            logging.error(f"Next state: {next_state.pretty()}")
+            logging.error(f"Next state:\n{next_state.pretty()}")
             logging.error(f"No allowed next states after state id {state_id}!")
             sys.exit(1)
         elif next_state not in allowed_states:
             logging.error("Next state not in allowed next states")
-            logging.error(f"Next state: {next_state.pretty()}")
-            logging.error("Allowed states:")
-            for state in allowed_states:
-                logging.error(state.pretty())
+            logging.error(f"Next state:\n{next_state.pretty()}")
+            for i, state in enumerate(allowed_states):
+                logging.error(f" -- Allowed state {i} -- \n{state.pretty()}")
 
             sys.exit(1)
 
