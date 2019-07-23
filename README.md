@@ -97,6 +97,7 @@ actual trace when the commit point advances.
   up. Actual traces should pass the trace checker now.
 * Trigger a rollback and check its trace.
 * Introduce a bug in the actual replica set, traces should fail the checker.
+* Prevent oplog truncation while the actual replica set is running.
 
 ## Implementation notes
 
