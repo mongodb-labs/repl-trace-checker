@@ -89,7 +89,7 @@ never advances in the model, but an actual replica set's commit point *does*
 advance. The trace checker fails, correctly, when it reaches the step in the
 actual trace when the commit point advances.
 
-[Sample output from the trace checker](sample-output.txt).
+[Sample output from the trace checker](./sample-output.txt).
 
 ## Next Steps
 
