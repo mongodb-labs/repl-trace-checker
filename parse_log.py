@@ -72,10 +72,10 @@ class LogEvent:
     commit_point: OplogEntry
     log: tuple
 
-    __pretty_template__ = """{{ location }} {{ timestamp }}
+    __pretty_template__ = """{{ location }} at {{ timestamp }}
 {{ action }} server_id={{ server_id }} state={{ server_state }} term={{ term }}
-commit point: {{ commit_point }}
-log: {{ log | join(', ') }}"""
+commit point: {{ commit_point | oplogentry }}
+log: {{ log | map('oplogentry') | join(', ') }}"""
 
 
 def parse_oplog(obj, oplog_index_mapper):

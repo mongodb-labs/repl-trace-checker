@@ -32,18 +32,13 @@ class SystemState:
         assert len(self.server_state) == self.n_servers
         assert len(self.commit_point) == self.n_servers
 
-    __pretty_template__ = """global term:   {{ global_current_term }}
-server states: {{ server_state | join(' ') }}
-commit points:
-{% for server_commit_point in commit_point -%}
-{{ loop.index }}: {{ server_commit_point }}
-{% endfor -%}
-logs:
-{%- for server_log in log %}
-{{ loop.index }}: {% if server_log -%}
-{{ server_log | join(' ') }}
-{%- else -%}
-empty
+    __pretty_template__ = """global term: {{ global_current_term }}
+{%- for i in range(n_servers) %}
+server {{ i }}: state={{ server_state[i] }}, commit point={{ commit_point[i] | oplogentry }}
+{%- if log[i] %}
+          log={{ log[i] | map('oplogentry') | join(', ') }}
+{%- else %}
+          log=empty
 {%- endif -%}
 {%- endfor -%}"""
 

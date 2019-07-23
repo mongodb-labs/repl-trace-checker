@@ -65,12 +65,20 @@ def update_state(current_state, log_event):
 def main(args):
     graph = load_graph(args)
     current_state = graph.get_init_state()
+    if len(args.logfile) != current_state.n_servers:
+        logging.error(
+            f"Graph's initial state has {current_state.n_servers} servers,"
+            f" but you provided {len(args.logfile)} mongod logs")
+        sys.exit(1)
+
     port_mapper = PortMapper()
     oplog_index_mapper = OplogIndexMapper()
-    for log_line in parse_log.merge_log_streams(args.logfile):
+    for i, log_line in enumerate(parse_log.merge_log_streams(args.logfile)):
         log_event = parse_log.parse_log_line(
             log_line, port_mapper, oplog_index_mapper)
         state_id = graph.get_state_id(current_state)
+        if i == 0:
+            logging.info('Initial state')
         logging.info(f'State id {state_id}:\n{current_state.pretty()}')
         logging.info(f'Log line:\n{log_event.pretty()}')
         next_state = update_state(current_state, log_event)
