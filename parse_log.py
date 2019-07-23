@@ -29,26 +29,42 @@ def parse_log_timestamp(timestamp_str):
     return datetime.datetime.strptime(timestamp_str, '%Y-%m-%dT%H:%M:%S.%f%z')
 
 
+@repl_checker_dataclass(order=True)
+class LogLine:
+    # Ordered so that a sequence of LogLines are sorted by timestamp.
+    timestamp: datetime.datetime
+    location: str
+    line: str
+    obj: dict
+
+
 def merge_log_streams(streams):
     """Merge logs, sorting by timestamp."""
 
     def gen(stream):
+        line_number = 0
         for line in stream:
+            line_number += 1
             match = line_pat.match(line)
             if not match:
                 continue
 
             timestamp = parse_log_timestamp(match.group('timestamp'))
-            # Yield (timestamp, line) tuples so heapq.merge sorts by timestamp.
-            yield timestamp, line
+            # Yield tuples
+            yield LogLine(timestamp=timestamp,
+                          location=f'{stream.name}:{line_number}',
+                          line=line,
+                          # json_util converts e.g. $numberLong to Python int.
+                          obj=json_util.loads(match.group('json')))
 
-    for _, line in heapq.merge(*map(gen, streams)):
-        yield line
+    return heapq.merge(*map(gen, streams))
 
 
 @repl_checker_dataclass
 class LogEvent:
     timestamp: datetime.datetime
+    location: str
+    line: str
     action: str
     server_id: int
     term: int
@@ -71,37 +87,34 @@ def parse_oplog(obj, oplog_index_mapper):
     return tuple(gen())
 
 
-def parse_log_line(line, port_mapper, oplog_index_mapper):
+def parse_log_line(log_line, port_mapper, oplog_index_mapper):
+    """Transform a LogLine into a LogEvent."""
     try:
-        match = line_pat.match(line)
-        if match:
-            timestamp = parse_log_timestamp(match.group('timestamp'))
-            # json_util converts e.g. $numberLong to Python int.
-            obj = json_util.loads(match.group('json'))
-            # MongoDB terms start at -1.
-            # TODO: Is this right?
-            term = max(obj['commitPoint']['t'], 0)
-            commit_point = OplogEntry(
-                term=term,
-                index=oplog_index_mapper.get_index(obj['commitPoint']['ts'])
-            )
+        obj = log_line.obj
+        # MongoDB terms start at -1.
+        # TODO: Is this right?
+        term = max(obj['commitPoint']['t'], 0)
+        commit_point = OplogEntry(
+            term=term,
+            index=oplog_index_mapper.get_index(obj['commitPoint']['ts']))
 
-            if obj['serverState'] not in ('PRIMARY', 'SECONDARY'):
-                raise ValueError(
-                    f"Illegal server state {obj['serverState']}, only PRIMARY"
-                    f" or SECONDARY are allowed in log messages")
+        if obj['serverState'] not in ('PRIMARY', 'SECONDARY'):
+            raise ValueError(
+                f"Illegal server state {obj['serverState']}, only PRIMARY"
+                f" or SECONDARY are allowed in log messages")
 
-            server_state = (
-                'Leader' if obj['serverState'] == 'PRIMARY' else 'Follower')
+        server_state = (
+            'Leader' if obj['serverState'] == 'PRIMARY' else 'Follower')
 
-            return LogEvent(
-                timestamp=timestamp,
-                action=obj['action'],
-                server_id=port_mapper.get_server_id(obj['myPort']),
-                term=obj['term'],
-                server_state=server_state,
-                commit_point=commit_point,
-                log=parse_oplog(obj['log'], oplog_index_mapper))
+        return LogEvent(timestamp=log_line.timestamp,
+                        location=log_line.location,
+                        line=log_line.line,
+                        action=obj['action'],
+                        server_id=port_mapper.get_server_id(obj['myPort']),
+                        term=obj['term'],
+                        server_state=server_state,
+                        commit_point=commit_point,
+                        log=parse_oplog(obj['log'], oplog_index_mapper))
     except Exception:
-        print('Exception parsing line: {!r}'.format(line))
+        print('Exception parsing line: {!r}'.format(log_line))
         raise
