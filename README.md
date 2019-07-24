@@ -35,9 +35,15 @@ some writes, and stop the set.
 
 Finally, I run a Python script that reads the GraphViz state graph and all the
 replica set members' logs. The script begins with the spec's initial state.
-Then, for each log message from the replica set, the script creates a new state
-that includes the changes expressed by the log message. For example, when a
-member
+Then, for each log message from the replica set, the script creates the next
+state, which includes the changes expressed by the log message. For example, if
+Server 1 becomes primary, it logs that its role is now "Leader". The script
+makes the next state, which is the same as the previous except for Server 1's
+new role.
+
+Once the script has created the next state, it checks the list of possible next
+states according to the spec. If there is a match, the cycle repeats, otherwise
+checking fails.
 
 ## Instructions
 
