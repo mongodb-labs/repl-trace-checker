@@ -1,0 +1,51 @@
+{%- set raft_mongo_variables %}
+<<
+{%- set comma = joiner() -%}
+{%- for field in system_state_fields -%}
+  {{ comma() }}
+  {{- field -}}
+{%- endfor -%}
+>>
+{%- endset -%}
+--------------------------------- MODULE Trace ---------------------------------
+\* This execution trace was generated from an actual replica set's log files.
+\* Each tuple is a state, {{ raft_mongo_variables }}
+
+Model == INSTANCE RaftMongo
+
+\* This section is adapated from Pressler 2018, including Pressler's comments.
+
+vars == {{ raft_mongo_variables }}
+
+VARIABLE i \* the trace index
+
+\* "Reading" a record is just vars = Trace[i], but unfortunately TLC isn’t happy
+\* with that, so:
+Read == LET Rec == Trace[i]
+        IN
+{% for field in system_state_fields %}
+           /\ {{ field }} = Rec[{{ loop.index }}]
+{% endfor %}
+
+\* Unfortunately, TLC also isn’t happy with just Read' – which is equivalent to:
+ReadNext == LET Rec == Trace[i']
+        IN
+{% for field in system_state_fields %}
+           /\ {{ field }}' = Rec[{{ loop.index }}]
+{% endfor %}
+
+Init == i = 1 /\ Read
+Next == \/ i < Len(Trace) /\ i' = i + 1 /\ ReadNext
+        \/ UNCHANGED <<i, vars>> \* So that we don’t get a deadlock error in TLC
+
+TraceBehavior == Init /\ [][Next]_<<vars, i>>
+
+\* Because we’re dealing with a finite trace, we only care about safety
+\* properties, as liveness concerns only infinite behaviors.
+\* TODO: Requires a property named "Safety" in spec? Explain in the paper.
+THEOREM TraceBehavior => Model!Safety
+
+\* To verify, we check the spec TraceBehavior in TLC , with Model!Safety as a
+\* temporal property. As we’re always wary of success, we modify the above trace
+\* to ensure that TLC finds an error.
+===============================================================================

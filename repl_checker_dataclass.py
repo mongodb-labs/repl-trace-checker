@@ -1,16 +1,20 @@
 import dataclasses
 import textwrap
 
-from jinja2 import Environment, Template
+from jinja2 import Environment
 
-environment = Environment()
+_environment = Environment(lstrip_blocks=True, trim_blocks=True)
 
 
 def oplogentry_filter(value):
     return f'[{value["term"]}, {value["index"]}]'
 
 
-environment.filters['oplogentry'] = oplogentry_filter
+_environment.filters['oplogentry'] = oplogentry_filter
+
+
+def jinja2_template_from_string(s):
+    return _environment.from_string(s)
 
 
 def repl_checker_dataclass(_cls=None, **kwargs):
@@ -18,12 +22,12 @@ def repl_checker_dataclass(_cls=None, **kwargs):
         wrapped = dataclasses.dataclass(cls, **kwargs)
 
         if hasattr(wrapped, '__pretty_template__'):
-            template = environment.from_string(wrapped.__pretty_template__)
+            template = jinja2_template_from_string(wrapped.__pretty_template__)
 
             def pretty(self):
-                return textwrap.indent(template.render(
-                    dataclasses.asdict(self), trim_blocks=True,
-                    lstrip_blocks=True), '  ')
+                return textwrap.indent(
+                    template.render(dataclasses.asdict(self)),
+                    '  ')
 
         else:
             def pretty(self):

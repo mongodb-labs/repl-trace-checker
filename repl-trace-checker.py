@@ -1,13 +1,14 @@
 import argparse
 import logging
 import os
-import pickle
-import sys
-from os.path import getmtime
+from contextlib import contextmanager
+from tempfile import NamedTemporaryFile
 
-import parse_dot
 import parse_log
+from repl_checker_dataclass import jinja2_template_from_string
 from system_state import OplogIndexMapper, PortMapper, SystemState
+
+this_dir = os.path.realpath(os.path.dirname(__file__))
 
 logging.basicConfig(
     format='%(levelname)-8s %(message)s',
@@ -16,30 +17,34 @@ logging.basicConfig(
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--refresh', action='store_true',
-                        help='Re-parse dotfile')
-    parser.add_argument('dotfile', type=argparse.FileType('r'))
-    parser.add_argument('logfile', type=argparse.FileType('r'), nargs='+')
+    parser = argparse.ArgumentParser(
+        description="Check that mongod logs match a TLA+ spec")
+
+    parser.add_argument(
+        'logfile',
+        type=argparse.FileType('r'),
+        nargs='+',
+        help='One or more mongod log files')
+
+    # Unlike argparse.FileType, this checks the file exists, but returns its
+    # path instead of a read handle.
+    def is_file(arg):
+        try:
+            with open(arg, 'r'):
+                return arg
+        except IOError:
+            raise argparse.ArgumentError("Could not open file")
+
+    parser.add_argument(
+        'specfile',
+        type=is_file,
+        help='TLA+ spec to check against')
+
+    parser.add_argument(
+        '--outfile',
+        help='Optional location to save temporary generated spec for debugging')
+
     return parser.parse_args()
-
-
-def load_graph(args):
-    cache_file_name = 'state_graph.pickle'
-    if (not args.refresh
-            and os.path.exists(cache_file_name)
-            and getmtime(cache_file_name) > getmtime(args.dotfile.name)):
-        logging.info(f"Loading cached {cache_file_name}")
-        graph = pickle.load(open(cache_file_name, 'rb'))
-    else:
-        logging.info(f"Loading {args.dotfile.name}")
-        graph = parse_dot.parse_dot(args.dotfile)
-        logging.info("Caching graph")
-        with open('state_graph.pickle', 'wb') as f:
-            pickle.dump(graph, f)
-
-    logging.info(f"Loaded {graph}")
-    return graph
 
 
 def update_state(current_state, log_event):
@@ -62,51 +67,57 @@ def update_state(current_state, log_event):
         commit_point=tuple(next_commit_point))
 
 
-def main(args):
-    graph = load_graph(args)
-    current_state = graph.get_init_state()
-    if len(args.logfile) != current_state.n_servers:
-        logging.error(
-            f"Graph's initial state has {current_state.n_servers} servers,"
-            f" but you provided {len(args.logfile)} mongod logs")
-        sys.exit(1)
+@contextmanager
+def temp_or_permanent_file_path(filename=None):
+    """Create a context for writing to a file.
 
+    If filename is None, create a temporary file that is deleted when the
+    context block closes.
+    """
+    if filename is not None:
+        f = open(filename, 'w+')
+        yield f
+        f.close()
+    else:
+        with NamedTemporaryFile(mode='w+', suffix='.tla') as f:
+            yield f
+
+
+def main(args):
+    trace = []
     port_mapper = PortMapper()
     oplog_index_mapper = OplogIndexMapper()
+
+    # TODO: How to get the initial state from the spec? Can TLC help?
+    n_servers = len(args.logfile)
+    current_state = SystemState(
+        n_servers=n_servers,
+        global_current_term=0,
+        log=((),) * n_servers,
+        server_state=("Follower",) * n_servers,
+        commit_point=({'term': 0, 'index': 0},) * n_servers)
+
     for i, log_line in enumerate(parse_log.merge_log_streams(args.logfile)):
         log_event = parse_log.parse_log_line(
             log_line, port_mapper, oplog_index_mapper)
-        state_id = graph.get_state_id(current_state)
-        if i == 0:
-            logging.info('Initial state')
-        logging.info(f'State id {state_id}:\n{current_state.pretty()}')
+        logging.info(f'Current state:\n{current_state.pretty()}')
         logging.info(f'Log line:\n{log_event.pretty()}')
-        next_state = update_state(current_state, log_event)
-        next_actions = graph.next_actions(current_state)
-        if not next_actions:
-            logging.error(f"No allowed next actions after state id {state_id}!")
-            sys.exit(1)
+        trace.append(current_state)
 
-        if log_event.action not in next_actions:
-            logging.error(f"Next action not in allowed next actions:"
-                          f" {', '.join(next_actions)}")
-            sys.exit(1)
+        # Generate next state.
+        current_state = update_state(current_state, log_event)
 
-        allowed_states = graph.next_states(current_state, log_event.action)
+    template = jinja2_template_from_string(
+        open(os.path.join(this_dir, 'trace.tla.jinja2')).read())
 
-        if not allowed_states:
-            logging.error(f"Next state:\n{next_state.pretty()}")
-            logging.error(f"No allowed next states after state id {state_id}!")
-            sys.exit(1)
-        elif next_state not in allowed_states:
-            logging.error("Next state not in allowed next states")
-            logging.error(f"Next state:\n{next_state.pretty()}")
-            for i, state in enumerate(allowed_states):
-                logging.error(f" -- Allowed state {i} -- \n{state.pretty()}")
+    tla_out = template.render(
+        system_state_fields=SystemState.tla_variable_names())
 
-            sys.exit(1)
-
-        current_state = next_state
+    # Creates a temporary file if args.outfile is None.
+    with temp_or_permanent_file_path(args.outfile) as outfile:
+        outfile.write(tla_out)
+        outfile.flush()
+        print(outfile.name)
 
 
 if __name__ == '__main__':

@@ -1,14 +1,20 @@
+import dataclasses
+from collections.abc import Mapping, Sequence
 from typing import Tuple
 
 from bson import Timestamp
 
-from repl_checker_dataclass import repl_checker_dataclass
+from repl_checker_dataclass import (jinja2_template_from_string,
+                                    repl_checker_dataclass)
 
 
 @repl_checker_dataclass(unsafe_hash=True)
 class OplogEntry:
     term: int
     index: int
+
+    def to_tla(self):
+        return python_to_tla(dataclasses.asdict(self))
 
 
 @repl_checker_dataclass(unsafe_hash=True)
@@ -42,6 +48,14 @@ server {{ i }}: state={{ server_state[i] }}, commit point={{ commit_point[i] | o
 {%- endif -%}
 {%- endfor -%}"""
 
+    @classmethod
+    def tla_variable_names(cls):
+        return ('global_current_term', 'log', 'server_state', 'commit_point')
+
+    def to_tla(self):
+        return python_to_tla((getattr(self, name)
+                              for name in self.tla_variable_names()))
+
 
 class PortMapper:
     """Maps port numbers to server ids, 0-indexed."""
@@ -72,3 +86,28 @@ class OplogIndexMapper:
 
     def get_index(self, timestamp):
         return self._ts_to_index[timestamp]
+
+
+def python_to_tla(data):
+    """Convert a Python object to a TLA+ expression string."""
+    if hasattr(data, 'to_tla'):
+        return data.to_tla()
+
+    # str is a Sequence, so check for str before Sequence.
+    if isinstance(data, str):
+        return data
+
+    if isinstance(data, int):
+        return repr(data)
+
+    if isinstance(data, Sequence):
+        return f'<<{",".join(python_to_tla(i) for i in data)}>>'
+
+    if isinstance(data, Mapping):
+        def gen():
+            for key, value in data.items():
+                yield f'{key} |-> {value}'
+
+        return f'[{", ".join(gen())}]'
+
+    raise TypeError(f'Cannot convert {data!r} to TLA+ notation')
