@@ -1,15 +1,22 @@
 import dataclasses
-from collections.abc import Mapping, Sequence
+from collections.abc import Generator, Mapping, Sequence
 from typing import Tuple
 
 from bson import Timestamp
 
-from repl_checker_dataclass import (jinja2_template_from_string,
-                                    repl_checker_dataclass)
+from repl_checker_dataclass import repl_checker_dataclass
 
 
 @repl_checker_dataclass(unsafe_hash=True)
 class OplogEntry:
+    term: int
+
+    def to_tla(self):
+        return python_to_tla(dataclasses.asdict(self))
+
+
+@repl_checker_dataclass(unsafe_hash=True)
+class CommitPoint:
     term: int
     index: int
 
@@ -21,36 +28,39 @@ class OplogEntry:
 class SystemState:
     n_servers: int
 
-    global_current_term: int
+    globalCurrentTerm: int
     """The globalCurrentTerm in the TLA+ spec."""
 
     log: Tuple[Tuple[OplogEntry]]
     """A list of oplogs, one per server."""
 
-    server_state: Tuple[str]
+    state: Tuple[str]
     """A list of states, either Leader or Follower, one per server."""
 
-    commit_point: Tuple[OplogEntry]
+    commitPoint: Tuple[CommitPoint]
     """Each server's view of the commit point, one OplogEntry per server."""
 
     def __post_init__(self):
         assert len(self.log) == self.n_servers
-        assert len(self.server_state) == self.n_servers
-        assert len(self.commit_point) == self.n_servers
+        assert len(self.state) == self.n_servers
+        assert len(self.commitPoint) == self.n_servers
 
-    __pretty_template__ = """global term: {{ global_current_term }}
-{%- for i in range(n_servers) %}
-server {{ i }}: state={{ server_state[i] }}, commit point={{ commit_point[i] | oplogentry }}
+    __pretty_template__ = """global term: {{ globalCurrentTerm }}
+{% for i in range(n_servers) -%}
+server {{ i }}: state={{ state[i] }}, commit point={{ commitPoint[i] }},
 {%- if log[i] %}
-          log={{ log[i] | map('oplogentry') | join(', ') }}
+ log={{ log[i] | join(', ') }}
 {%- else %}
-          log=empty
+ log=empty
+{%- endif -%}
+{%- if loop.nextitem -%}
+{{ '\n' }}
 {%- endif -%}
 {%- endfor -%}"""
 
     @classmethod
     def tla_variable_names(cls):
-        return ('global_current_term', 'log', 'server_state', 'commit_point')
+        return ('globalCurrentTerm', 'log', 'state', 'commitPoint')
 
     def to_tla(self):
         return python_to_tla((getattr(self, name)
@@ -95,12 +105,12 @@ def python_to_tla(data):
 
     # str is a Sequence, so check for str before Sequence.
     if isinstance(data, str):
-        return data
+        return f'"{data}"'
 
     if isinstance(data, int):
         return repr(data)
 
-    if isinstance(data, Sequence):
+    if isinstance(data, (Sequence, Generator)):
         return f'<<{",".join(python_to_tla(i) for i in data)}>>'
 
     if isinstance(data, Mapping):

@@ -72,18 +72,19 @@ that the trace represented by the log files is permitted by `RaftMongo.tla`.
 
 ## Current status
 
-The current TLA+ Spec needs some actions disabled in order to run, specifically
-the "commit point learning protocol" actions. As a result, the commit point
-never advances in the model, but an actual replica set's commit point *does*
-advance. The trace checker fails, correctly, when it reaches the step in the
-actual trace when the commit point advances.
+I have not yet added logging in the server implementations of the commit point
+learning protocol. Therefore the server's execution trace appears wrong: between 
+one AppendOplog action and the next, for example, its commit point advances, but 
+it never logs the AdvanceCommitPoint or similar action. The trace checker 
+considers this an error, as expected.
 
 [Sample output from the trace checker](./sample-output.txt).
 
 ## Next Steps
 
-* Uncomment the "commit point learning protocol" in the TLA+ spec and fix it
-  up. Actual traces should pass the trace checker now.
+* Add logging to the server implementations of the TLA+ actions 
+  AdvanceCommitPoint, LearnCommitPointWithTermCheckAction, and 
+  LearnCommitPointFromSyncSourceNeverBeyondLastAppliedAction. 
 * Trigger a rollback and check its trace.
 * Introduce a bug in the actual replica set, traces should fail the checker.
 * Prevent oplog truncation while the actual replica set is running.

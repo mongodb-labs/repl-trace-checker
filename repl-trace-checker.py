@@ -1,8 +1,8 @@
 import argparse
 import logging
 import os
-from contextlib import contextmanager
-from tempfile import NamedTemporaryFile
+import shutil
+from tempfile import TemporaryDirectory
 
 import parse_log
 from repl_checker_dataclass import jinja2_template_from_string
@@ -41,46 +41,71 @@ def parse_args():
         help='TLA+ spec to check against')
 
     parser.add_argument(
-        '--outfile',
-        help='Optional location to save temporary generated spec for debugging')
+        '--keep-temp-spec',
+        action='store_true',
+        help='Save generated spec, as file "Trace.tla"')
 
     return parser.parse_args()
 
 
 def update_state(current_state, log_event):
     # log is a tuple like (server 1's log, server 2's log, server 3's log),
-    # same for server_state and commit_point.
+    # same for state and commitPoint.
     next_log = list(current_state.log)
     next_log[log_event.server_id] = log_event.log
 
-    next_server_state = list(current_state.server_state)
-    next_server_state[log_event.server_id] = log_event.server_state
+    next_server_state = list(current_state.state)
+    next_server_state[log_event.server_id] = log_event.state
 
-    next_commit_point = list(current_state.commit_point)
-    next_commit_point[log_event.server_id] = log_event.commit_point
+    next_commit_point = list(current_state.commitPoint)
+    next_commit_point[log_event.server_id] = log_event.commitPoint
 
     return SystemState(
         n_servers=current_state.n_servers,
-        global_current_term=log_event.term,
+        globalCurrentTerm=log_event.term,
         log=tuple(next_log),
-        server_state=tuple(next_server_state),
-        commit_point=tuple(next_commit_point))
+        state=tuple(next_server_state),
+        commitPoint=tuple(next_commit_point))
 
 
-@contextmanager
-def temp_or_permanent_file_path(filename=None):
-    """Create a context for writing to a file.
+class TLCInputs:
+    def __init__(self, permanent):
+        """Create TLC's input TLA+ specification and configuration.
 
-    If filename is None, create a temporary file that is deleted when the
-    context block closes.
-    """
-    if filename is not None:
-        f = open(filename, 'w+')
-        yield f
-        f.close()
-    else:
-        with NamedTemporaryFile(mode='w+', suffix='.tla') as f:
-            yield f
+        If permanent is False, create temporary files that are deleted when the
+        context block closes. Otherwise create permanent files in the working
+        dir.
+        """
+        self.permanent = permanent
+        self.dir_path = None
+        self.spec = None
+        self.config = None
+        self._tmp_dir = None
+
+    def __enter__(self):
+        spec_filename = 'Trace.tla'
+        cfg_filename = 'Trace.cfg'
+        mode = 'w+'
+
+        if self.permanent:
+            self.dir_path = os.getcwd()
+            self.spec = open(spec_filename, mode)
+            self.config = open(cfg_filename, mode)
+        else:
+            self._tmp_dir = TemporaryDirectory()
+            self.dir_path = self._tmp_dir.name
+            spec_path = os.path.join(self._tmp_dir.name, spec_filename)
+            cfg_path = os.path.join(self._tmp_dir.name, cfg_filename)
+            self.spec = open(spec_path, mode)
+            self.config = open(cfg_path, mode)
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.spec.close()
+        self.config.close()
+        if self._tmp_dir:
+            self._tmp_dir.cleanup()
 
 
 def main(args):
@@ -92,32 +117,51 @@ def main(args):
     n_servers = len(args.logfile)
     current_state = SystemState(
         n_servers=n_servers,
-        global_current_term=0,
+        globalCurrentTerm=0,
         log=((),) * n_servers,
-        server_state=("Follower",) * n_servers,
-        commit_point=({'term': 0, 'index': 0},) * n_servers)
+        state=("Follower",) * n_servers,
+        commitPoint=({'term': 0, 'index': 0},) * n_servers)
 
-    for i, log_line in enumerate(parse_log.merge_log_streams(args.logfile)):
+    # The initial state is state 1, so start at 2.
+    for i, log_line in enumerate(parse_log.merge_log_streams(args.logfile),
+                                 start=2):
         log_event = parse_log.parse_log_line(
             log_line, port_mapper, oplog_index_mapper)
         logging.info(f'Current state:\n{current_state.pretty()}')
-        logging.info(f'Log line:\n{log_event.pretty()}')
+        logging.info(f'Log line #{i}:\n{log_event.pretty()}')
         trace.append(current_state)
 
         # Generate next state.
         current_state = update_state(current_state, log_event)
 
-    template = jinja2_template_from_string(
-        open(os.path.join(this_dir, 'trace.tla.jinja2')).read())
+    tla_template = jinja2_template_from_string(
+        open(os.path.join(this_dir, 'Trace.tla.jinja2')).read())
 
-    tla_out = template.render(
-        system_state_fields=SystemState.tla_variable_names())
+    tla_out = tla_template.render(
+        system_state_fields=SystemState.tla_variable_names(),
+        trace=trace)
 
-    # Creates a temporary file if args.outfile is None.
-    with temp_or_permanent_file_path(args.outfile) as outfile:
-        outfile.write(tla_out)
-        outfile.flush()
-        print(outfile.name)
+    cfg_template = jinja2_template_from_string(
+        open(os.path.join(this_dir, 'Trace.cfg.jinja2')).read())
+
+    cfg_out = cfg_template.render()
+
+    # Creates temporary files if args.keep_temp_spec is False.
+    with TLCInputs(args.keep_temp_spec) as inputs:
+        print(inputs.spec.name)
+        inputs.spec.write(tla_out)
+        inputs.spec.flush()
+
+        inputs.config.write(cfg_out)
+        inputs.config.flush()
+
+        # TODO:
+        if args.keep_temp_spec:
+            print(f'Copying {args.specfile}')
+
+        shutil.copy(args.specfile, inputs.dir_path)
+
+        # TODO: Run tlc
 
 
 if __name__ == '__main__':

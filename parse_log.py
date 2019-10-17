@@ -14,7 +14,7 @@ import re
 from bson import json_util  # pip install pymongo
 
 from repl_checker_dataclass import repl_checker_dataclass
-from system_state import OplogEntry
+from system_state import OplogEntry, CommitPoint
 
 # Match lines like:
 # 2019-07-16T12:24:41.964-0400 I  TLA_PLUS_TRACE [replexec-0]
@@ -63,19 +63,28 @@ def merge_log_streams(streams):
 @repl_checker_dataclass
 class LogEvent:
     timestamp: datetime.datetime
+    """The server log timestamp."""
     location: str
+    """Line number."""
     line: str
+    """The text of the server log line"""
     action: str
+    """The action (in TLA+ spec terms) the server is taking."""
     server_id: int
+    """The server's id (0-indexed)."""
     term: int
-    server_state: str
-    commit_point: OplogEntry
+    """The server's view of the term."""
+    state: str
+    """The server's replica set member state."""
+    commitPoint: CommitPoint
+    """The server's view of the commit point."""
     log: tuple
+    """The server's oplog."""
 
     __pretty_template__ = """{{ location }} at {{ timestamp }}
-{{ action }} server_id={{ server_id }} state={{ server_state }} term={{ term }}
-commit point: {{ commit_point | oplogentry }}
-log: {{ log | map('oplogentry') | join(', ') }}"""
+{{ action }} server_id={{ server_id }} state={{ state }} term={{ term }}
+commit point: {{ commitPoint }}
+log: {{ log | join(', ') }}"""
 
 
 def parse_oplog(obj, oplog_index_mapper):
@@ -86,8 +95,9 @@ def parse_oplog(obj, oplog_index_mapper):
 
     def gen():
         for index, entry in sorted(obj.items(), key=lambda item: int(item[0])):
+            # TODO: do we actually need oplog_index_mapper?
             oplog_index_mapper.set_index(entry['ts'], int(index))
-            yield OplogEntry(term=entry['t'], index=int(index))
+            yield OplogEntry(term=entry['t'])
 
     return tuple(gen())
 
@@ -99,7 +109,7 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
         # MongoDB terms start at -1.
         # TODO: Is this right?
         term = max(obj['commitPoint']['t'], 0)
-        commit_point = OplogEntry(
+        commitPoint = CommitPoint(
             term=term,
             index=oplog_index_mapper.get_index(obj['commitPoint']['ts']))
 
@@ -108,7 +118,7 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
                 f"Illegal server state {obj['serverState']}, only PRIMARY"
                 f" or SECONDARY are allowed in log messages")
 
-        server_state = (
+        state = (
             'Leader' if obj['serverState'] == 'PRIMARY' else 'Follower')
 
         return LogEvent(timestamp=log_line.timestamp,
@@ -117,8 +127,8 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
                         action=obj['action'],
                         server_id=port_mapper.get_server_id(obj['myPort']),
                         term=obj['term'],
-                        server_state=server_state,
-                        commit_point=commit_point,
+                        state=state,
+                        commitPoint=commitPoint,
                         log=parse_oplog(obj['log'], oplog_index_mapper))
     except Exception:
         print('Exception parsing line: {!r}'.format(log_line))

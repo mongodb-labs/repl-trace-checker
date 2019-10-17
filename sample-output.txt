@@ -1,538 +1,202 @@
-> python repl-trace-checker.py graph.dot mongod0.log mongod1.log mongod2.log
-
-INFO     Loading cached state_graph.pickle
-INFO     Loaded StateGraph: 12565 states, 12541 transitions, max oplog length 7
-INFO     Initial state
-INFO     State id -2037210432149726957:
+INFO     Current state:
   global term: 0
-  server 0: state=Follower, commit point=[0, 0]
-            log=empty
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:133 at 2019-07-22 07:35:24.620000-04:00
+  server 0: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+INFO     Log line #2:
+  mongod0.log:131 at 2019-10-09 15:30:39.681000-04:00
   BecomePrimaryByMagic server_id=0 state=Leader term=1
-  commit point: [0, 0]
+  commit point: {'term': 0, 'index': 0}
   log:
-INFO     State id 6951915480891109980:
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=empty
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:143 at 2019-07-22 07:35:26.486000-04:00
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log=empty
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+INFO     Log line #3:
+  mongod0.log:141 at 2019-10-09 15:30:40.964000-04:00
   ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0]
-INFO     State id 6677874885774829649:
+  commit point: {'term': 0, 'index': 0}
+  log: {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:144 at 2019-07-22 07:35:26.489000-04:00
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+INFO     Log line #4:
+  mongod0.log:142 at 2019-10-09 15:30:40.968000-04:00
   ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1]
-INFO     State id -5898055869787148319:
+  commit point: {'term': 0, 'index': 0}
+  log: {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:149 at 2019-07-22 07:35:26.514000-04:00
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+INFO     Log line #5:
+  mongod0.log:147 at 2019-10-09 15:30:40.990000-04:00
   ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2]
-INFO     State id -968226886556175053:
+  commit point: {'term': 0, 'index': 0}
+  log: {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:150 at 2019-07-22 07:35:26.515000-04:00
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+INFO     Log line #6:
+  mongod0.log:148 at 2019-10-09 15:30:40.991000-04:00
   ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3]
-INFO     State id -5283636622778835266:
+  commit point: {'term': 0, 'index': 0}
+  log: {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:154 at 2019-07-22 07:35:26.561000-04:00
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+INFO     Log line #7:
+  mongod0.log:152 at 2019-10-09 15:30:41.063000-04:00
   ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3], [1, 4]
-INFO     State id -1599436031898563876:
+  commit point: {'term': 0, 'index': 0}
+  log: {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:155 at 2019-07-22 07:35:26.562000-04:00
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+INFO     Log line #8:
+  mongod0.log:153 at 2019-10-09 15:30:41.064000-04:00
   ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-INFO     State id -8255354551721215227:
+  commit point: {'term': 0, 'index': 0}
+  log: {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:133 at 2019-07-22 07:35:27.529000-04:00
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+INFO     Log line #9:
+  mongod1.log:129 at 2019-10-09 15:30:41.648000-04:00
   AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0]
-INFO     State id 2240477851775132723:
+  commit point: {'term': 0, 'index': 0}
+  log: {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:134 at 2019-07-22 07:35:27.539000-04:00
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log={'term': 1}
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log=empty
+INFO     Log line #10:
+  mongod2.log:133 at 2019-10-09 15:30:41.648000-04:00
+  AppendOplog server_id=2 state=Follower term=1
+  commit point: {'term': 0, 'index': 0}
+  log: {'term': 1}
+INFO     Current state:
+  global term: 1
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log={'term': 1}
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log={'term': 1}
+INFO     Log line #11:
+  mongod1.log:130 at 2019-10-09 15:30:41.655000-04:00
   AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1]
-INFO     State id -7284141485196358374:
+  commit point: {'term': 0, 'index': 0}
+  log: {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:137 at 2019-07-22 07:35:27.565000-04:00
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log={'term': 1}
+INFO     Log line #12:
+  mongod2.log:134 at 2019-10-09 15:30:41.656000-04:00
+  AppendOplog server_id=2 state=Follower term=1
+  commit point: {'term': 0, 'index': 0}
+  log: {'term': 1}, {'term': 1}
+INFO     Current state:
+  global term: 1
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}
+INFO     Log line #13:
+  mongod1.log:136 at 2019-10-09 15:30:41.681000-04:00
   AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2]
-INFO     State id -1587712872291865190:
+  commit point: {'term': 1, 'index': 1}
+  log: {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:139 at 2019-07-22 07:35:27.575000-04:00
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 1, 'index': 1}, log={'term': 1}, {'term': 1}, {'term': 1}
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}
+INFO     Log line #14:
+  mongod1.log:137 at 2019-10-09 15:30:41.689000-04:00
   AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3]
-INFO     State id 3886445249168831718:
+  commit point: {'term': 1, 'index': 1}
+  log: {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:162 at 2019-07-22 07:35:27.578000-04:00
+  server 0: state=Leader, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 1, 'index': 1}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}
+INFO     Log line #15:
+  mongod0.log:160 at 2019-10-09 15:30:41.693000-04:00
   ClientWrite server_id=0 state=Leader term=1
-  commit point: [1, 3]
-  log: [1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]
-ERROR    Next state not in allowed next states
-ERROR    Next state:
+  commit point: {'term': 1, 'index': 3}
+  log: {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[1, 3]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-ERROR     -- Allowed state 0 --
+  server 0: state=Leader, commit point={'term': 1, 'index': 3}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 1, 'index': 1}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 2: state=Follower, commit point={'term': 0, 'index': 0}, log={'term': 1}, {'term': 1}
+INFO     Log line #16:
+  mongod2.log:138 at 2019-10-09 15:30:41.697000-04:00
+  AppendOplog server_id=2 state=Follower term=1
+  commit point: {'term': 1, 'index': 3}
+  log: {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-(repl-trace-checker) ➜  repl-trace-checker git:(master) ✗ python repl-trace-checker.py graph.dot mongod0.log mongod1.log mongod2.log > sample-output.txt
-INFO     Loading cached state_graph.pickle
-INFO     Loaded StateGraph: 12565 states, 12541 transitions, max oplog length 7
-INFO     Initial state
-INFO     State id -2037210432149726957:
-  global term: 0
-  server 0: state=Follower, commit point=[0, 0]
-            log=empty
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:133 at 2019-07-22 07:35:24.620000-04:00
-  BecomePrimaryByMagic server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log:
-INFO     State id 6951915480891109980:
+  server 0: state=Leader, commit point={'term': 1, 'index': 3}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 1, 'index': 1}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 2: state=Follower, commit point={'term': 1, 'index': 3}, log={'term': 1}, {'term': 1}, {'term': 1}
+INFO     Log line #17:
+  mongod2.log:140 at 2019-10-09 15:30:41.708000-04:00
+  AppendOplog server_id=2 state=Follower term=1
+  commit point: {'term': 1, 'index': 3}
+  log: {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=empty
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:143 at 2019-07-22 07:35:26.486000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0]
-INFO     State id 6677874885774829649:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:144 at 2019-07-22 07:35:26.489000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1]
-INFO     State id -5898055869787148319:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:149 at 2019-07-22 07:35:26.514000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2]
-INFO     State id -968226886556175053:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:150 at 2019-07-22 07:35:26.515000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3]
-INFO     State id -5283636622778835266:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:154 at 2019-07-22 07:35:26.561000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3], [1, 4]
-INFO     State id -1599436031898563876:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:155 at 2019-07-22 07:35:26.562000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-INFO     State id -8255354551721215227:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:133 at 2019-07-22 07:35:27.529000-04:00
+  server 0: state=Leader, commit point={'term': 1, 'index': 3}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 1, 'index': 1}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 2: state=Follower, commit point={'term': 1, 'index': 3}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Log line #18:
+  mongod1.log:140 at 2019-10-09 15:30:41.726000-04:00
   AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0]
-INFO     State id 2240477851775132723:
+  commit point: {'term': 1, 'index': 3}
+  log: {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:134 at 2019-07-22 07:35:27.539000-04:00
+  server 0: state=Leader, commit point={'term': 1, 'index': 3}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 1, 'index': 3}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 2: state=Follower, commit point={'term': 1, 'index': 3}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Log line #19:
+  mongod1.log:142 at 2019-10-09 15:30:41.735000-04:00
   AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1]
-INFO     State id -7284141485196358374:
+  commit point: {'term': 1, 'index': 4}
+  log: {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:137 at 2019-07-22 07:35:27.565000-04:00
-  AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2]
-INFO     State id -1587712872291865190:
+  server 0: state=Leader, commit point={'term': 1, 'index': 3}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 1, 'index': 4}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 2: state=Follower, commit point={'term': 1, 'index': 3}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Log line #20:
+  mongod2.log:143 at 2019-10-09 15:30:41.737000-04:00
+  AppendOplog server_id=2 state=Follower term=1
+  commit point: {'term': 1, 'index': 4}
+  log: {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Current state:
   global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:139 at 2019-07-22 07:35:27.575000-04:00
-  AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3]
-INFO     State id 3886445249168831718:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:162 at 2019-07-22 07:35:27.578000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [1, 3]
-  log: [1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]
-ERROR    Next state not in allowed next states
-ERROR    Next state:
-  global term: 1
-  server 0: state=Leader, commit point=[1, 3]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-ERROR     -- Allowed state 0 --
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-(repl-trace-checker) ➜  repl-trace-checker git:(master) ✗ python repl-trace-checker.py graph.dot mongod0.log mongod1.log mongod2.log 2&1> sample-output.txt
-[1] 23416
-usage: repl-trace-checker.py [-h] [--refresh] dotfile logfile [logfile ...]
-repl-trace-checker.py: error: argument logfile: can't open '2': [Errno 2] No such file or directory: '2'
-[1]  + 23416 exit 2     python repl-trace-checker.py graph.dot mongod0.log mongod1.log mongod2.log 2
-^C
-(repl-trace-checker) ➜  repl-trace-checker git:(master) ✗ python repl-trace-checker.py graph.dot mongod0.log mongod1.log mongod2.log 2>&1 > sample-output.txt
-INFO     Loading cached state_graph.pickle
-INFO     Loaded StateGraph: 12565 states, 12541 transitions, max oplog length 7
-INFO     Initial state
-INFO     State id -2037210432149726957:
-  global term: 0
-  server 0: state=Follower, commit point=[0, 0]
-            log=empty
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:133 at 2019-07-22 07:35:24.620000-04:00
-  BecomePrimaryByMagic server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log:
-INFO     State id 6951915480891109980:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=empty
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:143 at 2019-07-22 07:35:26.486000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0]
-INFO     State id 6677874885774829649:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:144 at 2019-07-22 07:35:26.489000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1]
-INFO     State id -5898055869787148319:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:149 at 2019-07-22 07:35:26.514000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2]
-INFO     State id -968226886556175053:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:150 at 2019-07-22 07:35:26.515000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3]
-INFO     State id -5283636622778835266:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:154 at 2019-07-22 07:35:26.561000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3], [1, 4]
-INFO     State id -1599436031898563876:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:155 at 2019-07-22 07:35:26.562000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-INFO     State id -8255354551721215227:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=empty
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:133 at 2019-07-22 07:35:27.529000-04:00
-  AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0]
-INFO     State id 2240477851775132723:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:134 at 2019-07-22 07:35:27.539000-04:00
-  AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1]
-INFO     State id -7284141485196358374:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:137 at 2019-07-22 07:35:27.565000-04:00
-  AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2]
-INFO     State id -1587712872291865190:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod2.log:139 at 2019-07-22 07:35:27.575000-04:00
-  AppendOplog server_id=1 state=Follower term=1
-  commit point: [0, 0]
-  log: [1, 0], [1, 1], [1, 2], [1, 3]
-INFO     State id 3886445249168831718:
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-INFO     Log line:
-  mongod1.log:162 at 2019-07-22 07:35:27.578000-04:00
-  ClientWrite server_id=0 state=Leader term=1
-  commit point: [1, 3]
-  log: [1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]
-ERROR    Next state not in allowed next states
-ERROR    Next state:
-  global term: 1
-  server 0: state=Leader, commit point=[1, 3]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
-ERROR     -- Allowed state 0 --
-  global term: 1
-  server 0: state=Leader, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6]
-  server 1: state=Follower, commit point=[0, 0]
-            log=[1, 0], [1, 1], [1, 2], [1, 3]
-  server 2: state=Follower, commit point=[0, 0]
-            log=empty
+  server 0: state=Leader, commit point={'term': 1, 'index': 3}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 1: state=Follower, commit point={'term': 1, 'index': 4}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+  server 2: state=Follower, commit point={'term': 1, 'index': 4}, log={'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+INFO     Log line #21:
+  mongod2.log:145 at 2019-10-09 15:30:41.745000-04:00
+  AppendOplog server_id=2 state=Follower term=1
+  commit point: {'term': 1, 'index': 5}
+  log: {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}, {'term': 1}
+Trace.tla
+Copying /Users/emptysquare/co/mongo-repl-tla/RaftMongo.tla

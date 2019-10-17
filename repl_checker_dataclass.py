@@ -6,13 +6,6 @@ from jinja2 import Environment
 _environment = Environment(lstrip_blocks=True, trim_blocks=True)
 
 
-def oplogentry_filter(value):
-    return f'[{value["term"]}, {value["index"]}]'
-
-
-_environment.filters['oplogentry'] = oplogentry_filter
-
-
 def jinja2_template_from_string(s):
     return _environment.from_string(s)
 
