@@ -62,6 +62,7 @@ def update_state(current_state, log_event):
 
     return SystemState(
         n_servers=current_state.n_servers,
+        action=log_event.action,
         globalCurrentTerm=log_event.term,
         log=tuple(next_log),
         state=tuple(next_server_state),
@@ -117,6 +118,7 @@ def main(args):
     n_servers = len(args.logfile)
     current_state = SystemState(
         n_servers=n_servers,
+        action='Init',
         globalCurrentTerm=0,
         log=((),) * n_servers,
         state=("Follower",) * n_servers,
@@ -138,7 +140,8 @@ def main(args):
         open(os.path.join(this_dir, 'Trace.tla.jinja2')).read())
 
     tla_out = tla_template.render(
-        system_state_fields=SystemState.tla_variable_names(),
+        raft_mongo_variables=SystemState.raft_mongo_variables(),
+        all_tla_variables=SystemState.all_tla_variables(),
         trace=trace)
 
     cfg_template = jinja2_template_from_string(
@@ -155,7 +158,6 @@ def main(args):
         inputs.config.write(cfg_out)
         inputs.config.flush()
 
-        # TODO:
         if args.keep_temp_spec:
             print(f'Copying {args.specfile}')
 

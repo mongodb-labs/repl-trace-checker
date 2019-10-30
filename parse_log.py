@@ -10,11 +10,13 @@ enabled like:
 import datetime
 import heapq
 import re
+import sys
+from json import JSONDecodeError
 
 from bson import json_util  # pip install pymongo
 
 from repl_checker_dataclass import repl_checker_dataclass
-from system_state import OplogEntry, CommitPoint
+from system_state import OplogEntry, CommitPoint, ServerState
 
 # Match lines like:
 # 2019-07-16T12:24:41.964-0400 I  TLA_PLUS_TRACE [replexec-0]
@@ -50,12 +52,20 @@ def merge_log_streams(streams):
                 continue
 
             timestamp = parse_log_timestamp(match.group('timestamp'))
+            try:
+                # json_util converts e.g. $numberLong to Python int.
+                obj = json_util.loads(match.group('json'))
+            except JSONDecodeError as exc:
+                print(f"Invalid JSON in {stream.name}:"
+                      f" {exc.msg} in column {exc.colno}:\n"
+                      f"{match.group('json')}")
+                sys.exit(2)
+
             # Yield tuples
             yield LogLine(timestamp=timestamp,
                           location=f'{stream.name}:{line_number}',
                           line=line,
-                          # json_util converts e.g. $numberLong to Python int.
-                          obj=json_util.loads(match.group('json')))
+                          obj=obj)
 
     return heapq.merge(*map(gen, streams))
 
@@ -74,7 +84,7 @@ class LogEvent:
     """The server's id (0-indexed)."""
     term: int
     """The server's view of the term."""
-    state: str
+    state: ServerState
     """The server's replica set member state."""
     commitPoint: CommitPoint
     """The server's view of the commit point."""
@@ -97,7 +107,7 @@ def parse_oplog(obj, oplog_index_mapper):
         for index, entry in sorted(obj.items(), key=lambda item: int(item[0])):
             # TODO: do we actually need oplog_index_mapper?
             oplog_index_mapper.set_index(entry['ts'], int(index))
-            yield OplogEntry(term=entry['t'])
+            yield OplogEntry(term=entry['term'])
 
     return tuple(gen())
 
@@ -113,21 +123,13 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
             term=term,
             index=oplog_index_mapper.get_index(obj['commitPoint']['ts']))
 
-        if obj['serverState'] not in ('PRIMARY', 'SECONDARY'):
-            raise ValueError(
-                f"Illegal server state {obj['serverState']}, only PRIMARY"
-                f" or SECONDARY are allowed in log messages")
-
-        state = (
-            'Leader' if obj['serverState'] == 'PRIMARY' else 'Follower')
-
         return LogEvent(timestamp=log_line.timestamp,
                         location=log_line.location,
                         line=log_line.line,
                         action=obj['action'],
                         server_id=port_mapper.get_server_id(obj['myPort']),
                         term=obj['term'],
-                        state=state,
+                        state=ServerState[obj['serverState']],
                         commitPoint=commitPoint,
                         log=parse_oplog(obj['log'], oplog_index_mapper))
     except Exception:

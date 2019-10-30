@@ -1,17 +1,8 @@
-{%- set raft_mongo_variables %}
-<<
-{%- set comma = joiner() -%}
-{%- for field in system_state_fields -%}
-  {{ comma() }}
-  {{- field -}}
-{%- endfor -%}
->>
-{%- endset -%}
 --------------------------------- MODULE Trace ---------------------------------
-EXTENDS Naturals, Sequences
+EXTENDS Integers, Sequences
 
 \* This execution trace was generated from an actual replica set's log files.
-\* Each tuple is {{ raft_mongo_variables }}
+\* Each tuple is <<{{ all_tla_variables | join(', ') }}>>
 
 Trace == <<
 {% set comma = joiner(',\n') %}
@@ -23,7 +14,7 @@ Trace == <<
 \* Adapted from Pressler 2018, including Pressler's comments.
 
 VARIABLES {% set comma = joiner() -%}
-{% for field in system_state_fields -%}
+{% for field in raft_mongo_variables -%}
   {{ comma() }}
   {{- field -}}
 {% endfor %}
@@ -32,15 +23,9 @@ VARIABLES {% set comma = joiner() -%}
 Model == INSTANCE RaftMongo WITH
 {# \* TODO: Why not "A", "B", "C"? #}
 {# \* TODO: Configurable number of servers #}
-  Server <- {1, 2, 3}{#,#}
-{#
-{% for field in system_state_fields %}
-  {{ field }} <- {{ field }}{% if not loop.last %},{% endif %}
+  Server <- {1, 2, 3}
 
-{% endfor %}
-#}
-
-vars == {{ raft_mongo_variables }}
+vars == <<{{ raft_mongo_variables | join(', ') }}>>
 
 VARIABLE i \* the trace index
 
@@ -48,15 +33,19 @@ VARIABLE i \* the trace index
 \* with that, so:
 Read == LET Rec == Trace[i]
         IN
-{% for field in system_state_fields %}
+{% for field in all_tla_variables %}
+  {% if field in raft_mongo_variables %}
            /\ {{ field }} = Rec[{{ loop.index }}]
+  {% endif %}
 {% endfor %}
 
 \* Unfortunately, TLC also isn’t happy with just Read' – which is equivalent to:
 ReadNext == LET Rec == Trace[i']
             IN
-{% for field in system_state_fields %}
+{% for field in all_tla_variables %}
+  {% if field in raft_mongo_variables %}
                /\ {{ field }}' = Rec[{{ loop.index }}]
+  {% endif %}
 {% endfor %}
 
 Init == i = 1 /\ Read

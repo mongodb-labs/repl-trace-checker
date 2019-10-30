@@ -1,10 +1,19 @@
 import dataclasses
+import enum
 from collections.abc import Generator, Mapping, Sequence
 from typing import Tuple
 
 from bson import Timestamp
 
 from repl_checker_dataclass import repl_checker_dataclass
+
+
+class ServerState(enum.Enum):
+    Leader = enum.auto()
+    Follower = enum.auto()
+
+    def to_tla(self):
+        return python_to_tla(self.name)
 
 
 @repl_checker_dataclass(unsafe_hash=True)
@@ -27,6 +36,9 @@ class CommitPoint:
 @repl_checker_dataclass(unsafe_hash=True)
 class SystemState:
     n_servers: int
+
+    action: str
+    """The TLA+ action that led to this state."""
 
     globalCurrentTerm: int
     """The globalCurrentTerm in the TLA+ spec."""
@@ -59,12 +71,16 @@ server {{ i }}: state={{ state[i] }}, commit point={{ commitPoint[i] }},
 {%- endfor -%}"""
 
     @classmethod
-    def tla_variable_names(cls):
+    def raft_mongo_variables(cls):
         return ('globalCurrentTerm', 'log', 'state', 'commitPoint')
+
+    @classmethod
+    def all_tla_variables(cls):
+        return ('action',) + cls.raft_mongo_variables()
 
     def to_tla(self):
         return python_to_tla((getattr(self, name)
-                              for name in self.tla_variable_names()))
+                              for name in self.all_tla_variables()))
 
 
 class PortMapper:
