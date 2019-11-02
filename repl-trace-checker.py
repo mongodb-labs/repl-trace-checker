@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 
 import parse_log
 from repl_checker_dataclass import jinja2_template_from_string
-from system_state import OplogIndexMapper, PortMapper, SystemState
+from system_state import OplogIndexMapper, PortMapper, ServerState, SystemState
 
 this_dir = os.path.realpath(os.path.dirname(__file__))
 
@@ -66,7 +66,8 @@ def update_state(current_state, log_event):
         globalCurrentTerm=log_event.term,
         log=tuple(next_log),
         state=tuple(next_server_state),
-        commitPoint=tuple(next_commit_point))
+        commitPoint=tuple(next_commit_point),
+        serverLogLocation=log_event.location)
 
 
 class TLCInputs:
@@ -119,22 +120,24 @@ def main(args):
     current_state = SystemState(
         n_servers=n_servers,
         action='Init',
-        globalCurrentTerm=0,
+        globalCurrentTerm=-1,
         log=((),) * n_servers,
-        state=("Follower",) * n_servers,
-        commitPoint=({'term': 0, 'index': 0},) * n_servers)
+        state=(ServerState.Follower,) * n_servers,
+        commitPoint=({'term': -1, 'index': 0},) * n_servers,
+        serverLogLocation="")
 
-    # The initial state is state 1, so start at 2.
     for i, log_line in enumerate(parse_log.merge_log_streams(args.logfile),
-                                 start=2):
+                                 start=1):
         log_event = parse_log.parse_log_line(
             log_line, port_mapper, oplog_index_mapper)
-        logging.info(f'Current state:\n{current_state.pretty()}')
+        logging.info(f'{"Initial" if i == 1 else "Current"} state:\n{current_state.pretty()}')
         logging.info(f'Log line #{i}:\n{log_event.pretty()}')
         trace.append(current_state)
 
         # Generate next state.
         current_state = update_state(current_state, log_event)
+
+    logging.info(f'Final state:\n{current_state.pretty()}')
 
     tla_template = jinja2_template_from_string(
         open(os.path.join(this_dir, 'Trace.tla.jinja2')).read())
@@ -151,17 +154,21 @@ def main(args):
 
     # Creates temporary files if args.keep_temp_spec is False.
     with TLCInputs(args.keep_temp_spec) as inputs:
-        print(inputs.spec.name)
+        print(f'Generating {inputs.spec.name}')
         inputs.spec.write(tla_out)
         inputs.spec.flush()
 
         inputs.config.write(cfg_out)
         inputs.config.flush()
 
-        if args.keep_temp_spec:
-            print(f'Copying {args.specfile}')
+        try:
+            shutil.copy(args.specfile, inputs.dir_path)
+            if args.keep_temp_spec:
+                print(f'Copied {args.specfile} to ${inputs.dir_path}')
 
-        shutil.copy(args.specfile, inputs.dir_path)
+        except shutil.SameFileError:
+            # --keep-temp-spec with a spec file in the current directory.
+            pass
 
         # TODO: Run tlc
 

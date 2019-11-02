@@ -15,6 +15,12 @@ class ServerState(enum.Enum):
     def to_tla(self):
         return python_to_tla(self.name)
 
+    def __str__(self):
+        return self.name.rjust(ServerState._max_name_length)
+
+
+ServerState._max_name_length = max(len(e.name) for e in ServerState)
+
 
 @repl_checker_dataclass(unsafe_hash=True)
 class OplogEntry:
@@ -46,11 +52,14 @@ class SystemState:
     log: Tuple[Tuple[OplogEntry]]
     """A list of oplogs, one per server."""
 
-    state: Tuple[str]
+    state: Tuple[ServerState]
     """A list of states, either Leader or Follower, one per server."""
 
     commitPoint: Tuple[CommitPoint]
     """Each server's view of the commit point, one OplogEntry per server."""
+
+    serverLogLocation: str
+    """Filename:line of the mongod log that generated this state."""
 
     def __post_init__(self):
         assert len(self.log) == self.n_servers
@@ -76,7 +85,7 @@ server {{ i }}: state={{ state[i] }}, commit point={{ commitPoint[i] }},
 
     @classmethod
     def all_tla_variables(cls):
-        return ('action',) + cls.raft_mongo_variables()
+        return ('action', 'serverLogLocation') + cls.raft_mongo_variables()
 
     def to_tla(self):
         return python_to_tla((getattr(self, name)

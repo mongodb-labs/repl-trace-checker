@@ -92,7 +92,7 @@ class LogEvent:
     """The server's oplog."""
 
     __pretty_template__ = """{{ location }} at {{ timestamp }}
-{{ action }} server_id={{ server_id }} state={{ state }} term={{ term }}
+{{ action }} server_id={{ server_id }} state={{ state.name }} term={{ term }}
 commit point: {{ commitPoint }}
 log: {{ log | join(', ') }}"""
 
@@ -117,8 +117,7 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
     try:
         obj = log_line.obj
         # MongoDB terms start at -1.
-        # TODO: Is this right?
-        term = max(obj['commitPoint']['t'], 0)
+        term = obj['commitPoint']['t']
         commitPoint = CommitPoint(
             term=term,
             index=oplog_index_mapper.get_index(obj['commitPoint']['ts']))
