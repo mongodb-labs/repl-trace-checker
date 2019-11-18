@@ -88,3 +88,5 @@ considers this an error, as expected.
 * Trigger a rollback and check its trace.
 * Introduce a bug in the actual replica set, traces should fail the checker.
 * Prevent oplog truncation while the actual replica set is running.
+* Note the trick for debugging traces: Add "Trace[i]" in the Toolbox's
+  "Error-Trace Exploration" box
