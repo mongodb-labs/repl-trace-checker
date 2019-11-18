@@ -23,7 +23,7 @@ from system_state import OplogEntry, CommitPoint, ServerState
 #   {"action": "BecomePrimaryByMagic", ...}
 line_pat = re.compile(
     r'(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}[+-]\d{4})'
-    r'.+?TLA_PLUS_TRACE.+? '
+    r'.+? TLA_PLUS .+? '
     r'(?P<json>{.*})')
 
 
