@@ -97,17 +97,17 @@ commit point: {{ commitPoint }}
 log: {{ log | join(', ') }}"""
 
 
-def parse_oplog(obj, oplog_index_mapper):
+def parse_oplog(jsonArray, oplog_index_mapper):
     """Parse a TLA+ oplog from a JSON-parsed mongod log message.
 
-    obj is like {'0': {op: 'i', ...}, 1: {...}}.
+    jsonArray is a list of optimes with timestamp "ts" and term "t", like
+    [{ts: {$timestamp: {t: 123, i: 4}}, t: {"$numberLong" : "1" }}, ...]
     """
 
     def gen():
-        for index, entry in sorted(obj.items(), key=lambda item: int(item[0])):
-            # TODO: do we actually need oplog_index_mapper?
-            oplog_index_mapper.set_index(entry['ts'], int(index))
-            yield OplogEntry(term=entry['term'])
+        for index, entry in enumerate(jsonArray):
+            oplog_index_mapper.set_index(entry['ts'], index)
+            yield OplogEntry(term=entry['t'])
 
     return tuple(gen())
 
@@ -115,22 +115,23 @@ def parse_oplog(obj, oplog_index_mapper):
 def parse_log_line(log_line, port_mapper, oplog_index_mapper):
     """Transform a LogLine into a LogEvent."""
     try:
-        obj = log_line.obj
-        # MongoDB terms start at -1.
-        term = obj['commitPoint']['t']
+        # Generic logging is in "trace", RaftMongo.tla-specific in "raft_mongo".
+        trace = log_line.obj
+        raft_mongo = trace['state']
+        port = int(trace['host'].split(':')[1])
         commitPoint = CommitPoint(
-            term=term,
-            index=oplog_index_mapper.get_index(obj['commitPoint']['ts']))
+            term=raft_mongo['commitPoint']['t'],
+            index=oplog_index_mapper.get_index(raft_mongo['commitPoint']['ts']))
 
         return LogEvent(timestamp=log_line.timestamp,
                         location=log_line.location,
                         line=log_line.line,
-                        action=obj['action'],
-                        server_id=port_mapper.get_server_id(obj['myPort']),
-                        term=obj['term'],
-                        state=ServerState[obj['serverState']],
+                        action=trace['action'],
+                        server_id=port_mapper.get_server_id(port),
+                        term=raft_mongo['term'],
+                        state=ServerState[raft_mongo['serverState']],
                         commitPoint=commitPoint,
-                        log=parse_oplog(obj['log'], oplog_index_mapper))
+                        log=parse_oplog(raft_mongo['log'], oplog_index_mapper))
     except Exception:
         print('Exception parsing line: {!r}'.format(log_line))
         raise
