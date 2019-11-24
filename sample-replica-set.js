@@ -17,11 +17,17 @@ rst.startSet();
 const config = rst.getReplSetConfig();
 jsTestLog(`reconfig: ${tojson(config)}`);
 assert.commandWorked(rst.nodes[0].getDB('admin').runCommand({replSetInitiate: config}));
-const collection = rst.getPrimary().getDB('test').collection;
-const wc = {
-    writeConcern: {w: 'majority', wtimeout: 10000}
-};
+const db = rst.getPrimary().getDB('test');
+const wc = {w: 'majority', wtimeout: 10000};
 jsTestLog("single insert");
-printjson(assert.commandWorked(collection.insert({_id: 0}, wc)));
+printjson(assert.commandWorked(db.runCommand({
+    insert: 'collection',
+    documents: [{_id: 0}],
+    writeConcern: wc
+})));
 jsTestLog("bulk insert");
-printjson(assert.commandWorked(collection.insertMany([{_id: 1}, {_id: 2}], wc)));
+printjson(assert.commandWorked(db.runCommand({
+    insert: 'collection',
+    documents: [{_id: 1}, {_id: 2}],
+    writeConcern: wc
+})));
