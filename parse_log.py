@@ -94,21 +94,6 @@ class LogEvent:
     __pretty_template__ = """{{ location }} at {{ timestamp }}
 {{ action }} server_id={{ server_id }} state={{ state.name }} term={{ term }}
 commit point: {{ commitPoint }}
-
-
-def parse_oplog(jsonArray, oplog_index_mapper):
-    """Parse a TLA+ oplog from a JSON-parsed mongod log message.
-
-    jsonArray is a list of optimes with timestamp "ts" and term "t", like
-    [{ts: {$timestamp: {t: 123, i: 4}}, t: {"$numberLong" : "1" }}, ...]
-    """
-
-    def gen():
-        for index, entry in enumerate(jsonArray):
-            oplog_index_mapper.set_index(entry['ts'], index)
-            yield OplogEntry(term=entry['t'])
-
-    return tuple(gen())
 log: {{ log | oplog }}"""
 
 
@@ -119,6 +104,17 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
         trace = log_line.obj
         raft_mongo = trace['state']
         port = int(trace['host'].split(':')[1])
+
+        # JSON oplog is a list of optimes with timestamp "ts" and term "t", like
+        # [{ts: {$timestamp: {t: 123, i: 4}}, t: {"$numberLong" : "1" }}, ...].
+        # Update timestamp -> index map, which we use below for CommitPoint.
+        def generate_oplog_entries():
+            for index, entry in enumerate(raft_mongo['log']):
+                oplog_index_mapper.set_index(entry['ts'], index)
+                yield OplogEntry(term=entry['t'])
+
+        log = tuple(generate_oplog_entries())
+
         commitPoint = CommitPoint(
             term=raft_mongo['commitPoint']['t'],
             index=oplog_index_mapper.get_index(raft_mongo['commitPoint']['ts']))
@@ -131,7 +127,7 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
                         term=raft_mongo['term'],
                         state=ServerState[raft_mongo['serverState']],
                         commitPoint=commitPoint,
-                        log=parse_oplog(raft_mongo['log'], oplog_index_mapper))
+                        log=log)
     except Exception:
         print('Exception parsing line: {!r}'.format(log_line))
         raise
