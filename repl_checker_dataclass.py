@@ -1,9 +1,35 @@
 import dataclasses
+import itertools
 import textwrap
 
 from jinja2 import Environment
 
+
+def pretty_oplog(oplog):
+    """Summarize an oplog for diagnostic output.
+
+    oplog is a tuple like ({'term': 1}, {'term': 2}, ...).
+    """
+
+    def get_term(entry):
+        return entry['term']
+
+    def gen():
+        index = 0
+        for term, entries in itertools.groupby(oplog, key=get_term):
+            num_entries = len(list(entries))
+            if num_entries == 1:
+                yield (f'term {term} entry {index}')
+            else:
+                yield (f'term {term} entries {index}-{index + num_entries - 1}')
+
+            index += num_entries
+
+    return f'[{", ".join(gen())}]'
+
+
 _environment = Environment(lstrip_blocks=True, trim_blocks=True)
+_environment.filters['oplog'] = pretty_oplog
 
 
 def jinja2_template_from_string(s):

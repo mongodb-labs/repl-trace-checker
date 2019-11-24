@@ -70,7 +70,7 @@ class SystemState:
 {% for i in range(n_servers) -%}
 server {{ i }}: state={{ state[i] }}, commit point={{ commitPoint[i] }},
 {%- if log[i] %}
- log={{ log[i] | join(', ') }}
+ log={{ log[i] | oplog }}
 {%- else %}
  log=empty
 {%- endif -%}

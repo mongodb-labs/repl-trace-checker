@@ -56,7 +56,7 @@ def merge_log_streams(streams):
                 # json_util converts e.g. $numberLong to Python int.
                 obj = json_util.loads(match.group('json'))
             except JSONDecodeError as exc:
-                print(f"Invalid JSON in {stream.name}:"
+                print(f"Invalid JSON in {stream.name}:{line_number}"
                       f" {exc.msg} in column {exc.colno}:\n"
                       f"{match.group('json')}")
                 sys.exit(2)
@@ -75,7 +75,7 @@ class LogEvent:
     timestamp: datetime.datetime
     """The server log timestamp."""
     location: str
-    """Line number."""
+    """File name and line number, like 'file.log:123'."""
     line: str
     """The text of the server log line"""
     action: str
@@ -94,7 +94,6 @@ class LogEvent:
     __pretty_template__ = """{{ location }} at {{ timestamp }}
 {{ action }} server_id={{ server_id }} state={{ state.name }} term={{ term }}
 commit point: {{ commitPoint }}
-log: {{ log | join(', ') }}"""
 
 
 def parse_oplog(jsonArray, oplog_index_mapper):
@@ -110,6 +109,7 @@ def parse_oplog(jsonArray, oplog_index_mapper):
             yield OplogEntry(term=entry['t'])
 
     return tuple(gen())
+log: {{ log | oplog }}"""
 
 
 def parse_log_line(log_line, port_mapper, oplog_index_mapper):
