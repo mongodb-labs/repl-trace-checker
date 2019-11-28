@@ -22,6 +22,7 @@ VARIABLES {% set comma = joiner() -%}
 {# \* TODO: Why doesn't Pressler need to do this? #}
 {% set comma = joiner() -%}
 Model == INSTANCE RaftMongo WITH
+  MaxClientWriteSize <- 1000,
   Server <- {{ '{' }}{% for i in range(n_servers) %}{{ comma() }}{{ loop.index }}{% endfor %}{{ '}' }}
 
 vars == <<{{ raft_mongo_variables | join(', ') }}>>

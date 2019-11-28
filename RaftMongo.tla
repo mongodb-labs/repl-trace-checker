@@ -4,7 +4,7 @@
 EXTENDS Integers, FiniteSets, Sequences, TLC
 
 \* The set of server IDs
-CONSTANTS Server
+CONSTANTS Server, MaxClientWriteSize
 
 ----
 \* Global variables
@@ -147,12 +147,15 @@ ReplSetInitiate(i) ==
 
 
 \* ACTION
-\* Leader i receives a client request to add v to the log.
+\* Leader i receives a client request to add one or more entries to the log.
 ClientWrite(i) ==
     /\ state[i] = "Leader"
-    /\ LET entry == [term  |-> globalCurrentTerm]
-           newLog == Append(log[i], entry)
-       IN  log' = [log EXCEPT ![i] = newLog]
+    /\ \E numEntries \in 1..MaxClientWriteSize :
+        LET entry == [term |-> globalCurrentTerm]
+            newEntries == [ j \in 1..numEntries |-> entry ]
+            newLog == log[i] \o newEntries
+        IN /\ log' = [log EXCEPT ![i] = newLog]
+           /\ PrintT(<<"ClientWrite", numEntries, "new entries">>)
     /\ UNCHANGED <<serverVars>>
 
 \* ACTION
