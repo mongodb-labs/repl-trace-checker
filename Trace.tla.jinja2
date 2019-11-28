@@ -20,10 +20,9 @@ VARIABLES {% set comma = joiner() -%}
 {% endfor %}
 
 {# \* TODO: Why doesn't Pressler need to do this? #}
+{% set comma = joiner() -%}
 Model == INSTANCE RaftMongo WITH
-{# \* TODO: Why not "A", "B", "C"? #}
-{# \* TODO: Configurable number of servers #}
-  Server <- {1, 2, 3}
+  Server <- {{ '{' }}{% for i in range(n_servers) %}{{ comma() }}{{ loop.index }}{% endfor %}{{ '}' }}
 
 vars == <<{{ raft_mongo_variables | join(', ') }}>>
 

@@ -1,5 +1,5 @@
 const rst = new ReplSetTest({
-    nodes: 3,
+    nodes: [{}, {rsConfig: {priority: 0}}],
     oplogSize: 999999,  // We don't model truncation in our specs, so disable it
     nodeOptions: {
         useLogFiles: true,
@@ -31,3 +31,6 @@ printjson(assert.commandWorked(db.runCommand({
     documents: [{_id: 1}, {_id: 2}],
     writeConcern: wc
 })));
+
+jsTestLog(`primary oplog`);
+rst.nodes[0].getDB('local').getCollection('oplog.rs').find().pretty().shellPrint();

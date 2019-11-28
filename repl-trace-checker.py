@@ -145,6 +145,7 @@ def main(args):
     tla_out = tla_template.render(
         raft_mongo_variables=SystemState.raft_mongo_variables(),
         all_tla_variables=SystemState.all_tla_variables(),
+        n_servers=current_state.n_servers,
         trace=trace)
 
     cfg_template = jinja2_template_from_string(
