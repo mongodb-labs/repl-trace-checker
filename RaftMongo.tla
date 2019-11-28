@@ -73,8 +73,7 @@ AppendOplog(i, j) ==
     /\ LastTerm(log[i]) = LogTerm(j, Len(log[i]))
     /\ \E lastAppended \in (Len(log[i]) + 1)..Len(log[j]):
         LET appendedEntries == SubSeq(log[j], Len(log[i]) + 1, lastAppended)
-         IN /\ log' = [log EXCEPT ![i] = log[i] \o appendedEntries]
-            /\ PrintT(<<"Append entries", Len(log[i]), "through", lastAppended, "from", j, "to", i>>)
+        IN  log' = [log EXCEPT ![i] = log[i] \o appendedEntries]
     /\ UNCHANGED <<serverVars>>
 
 CanRollbackOplog(i, j) ==
@@ -154,8 +153,7 @@ ClientWrite(i) ==
         LET entry == [term |-> globalCurrentTerm]
             newEntries == [ j \in 1..numEntries |-> entry ]
             newLog == log[i] \o newEntries
-        IN /\ log' = [log EXCEPT ![i] = newLog]
-           /\ PrintT(<<"ClientWrite", numEntries, "new entries">>)
+        IN  log' = [log EXCEPT ![i] = newLog]
     /\ UNCHANGED <<serverVars>>
 
 \* ACTION
