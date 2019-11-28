@@ -139,7 +139,7 @@ BecomePrimaryByMagic(i) ==
 \* Not needed for correctness, but modeled here because the implementation does it.
 ReplSetInitiate(i) ==
     /\ Init
-    /\ LET entry == [term  |-> globalCurrentTerm]
+    /\ LET entry == [term |-> globalCurrentTerm]
            newLog == Append(log[i], entry)
        IN  log' = [log EXCEPT ![i] = newLog]
     /\ UNCHANGED <<serverVars>>
