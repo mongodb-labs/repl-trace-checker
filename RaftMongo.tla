@@ -121,6 +121,7 @@ NeverRollbackCommitted ==
 \* ACTION
 \* i = the new primary node.
 \* In the implementation, term starts at -1, then 1, then increments normally.
+\* TODO: model the no-op write?
 BecomePrimaryByMagic(i) ==
     LET notBehind(me, j) ==
             \/ LastTerm(log[me]) > LastTerm(log[j])
