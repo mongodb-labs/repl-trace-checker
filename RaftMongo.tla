@@ -158,9 +158,12 @@ ClientWrite(i) ==
 AdvanceCommitPoint ==
     \E leader \in Server :
         /\ state[leader] = "Leader"
-        /\ IsCommitted(leader, Len(log[leader]))
-        /\ commitPoint' = [commitPoint EXCEPT ![leader] = [term |-> LastTerm(log[leader]), index |-> Len(log[leader])]]
-        /\ UNCHANGED <<electionVars, logVars>>
+        \* New commitPoint is any committed log index after current commitPoint
+        /\ \E committedIndex \in (commitPoint[leader].index+1)..Len(log[leader]) :
+            /\ IsCommitted(leader, committedIndex)
+            /\ LET newCommitPoint == [term |-> LogTerm(leader, committedIndex), index |-> committedIndex]
+               IN  commitPoint' = [commitPoint EXCEPT ![leader] = newCommitPoint]
+            /\ UNCHANGED <<electionVars, logVars>>
 
 \* Return whether Node i can learn the commit point from Node j.
 CommitPointLessThan(i, j) ==
