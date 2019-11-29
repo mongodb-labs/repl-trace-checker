@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 import itertools
 import textwrap
 
@@ -30,6 +31,7 @@ def pretty_oplog(oplog):
 
 _environment = Environment(lstrip_blocks=True, trim_blocks=True)
 _environment.filters['oplog'] = pretty_oplog
+_environment.globals['now'] = datetime.datetime.now
 
 
 def jinja2_template_from_string(s):
