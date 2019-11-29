@@ -91,6 +91,10 @@ server {{ i }}: state={{ state[i] }}, commit point={{ commitPoint[i] }},
         return python_to_tla((getattr(self, name)
                               for name in self.all_tla_variables()))
 
+    @property
+    def max_oplog_len(self):
+        return max(len(log) for log in self.log)
+
 
 class PortMapper:
     """Maps port numbers to server ids, 0-indexed."""

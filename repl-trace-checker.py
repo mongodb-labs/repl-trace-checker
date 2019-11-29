@@ -126,16 +126,23 @@ def main(args):
         commitPoint=({'term': -1, 'index': 0},) * n_servers,
         serverLogLocation="")
 
+    # Track the max number of oplog entries added in one event.
+    max_client_write_size = 0
+
     for i, log_line in enumerate(parse_log.merge_log_streams(args.logfile),
                                  start=1):
         log_event = parse_log.parse_log_line(
             log_line, port_mapper, oplog_index_mapper)
-        logging.info(f'{"Initial" if i == 1 else "Current"} state:\n{current_state.pretty()}')
+        logging.info(
+            f'{"Initial" if i == 1 else "Current"} state:\n{current_state.pretty()}')
         logging.info(f'Log line #{i}:\n{log_event.pretty()}')
         trace.append(current_state)
 
         # Generate next state.
+        max_oplog_len = current_state.max_oplog_len
         current_state = update_state(current_state, log_event)
+        max_client_write_size = max(max_client_write_size,
+                                    current_state.max_oplog_len - max_oplog_len)
 
     logging.info(f'Final state:\n{current_state.pretty()}')
 
@@ -145,6 +152,7 @@ def main(args):
     tla_out = tla_template.render(
         raft_mongo_variables=SystemState.raft_mongo_variables(),
         all_tla_variables=SystemState.all_tla_variables(),
+        max_client_write_size=max_client_write_size,
         n_servers=current_state.n_servers,
         trace=trace)
 
