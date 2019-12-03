@@ -136,7 +136,7 @@ BecomePrimaryByMagic(i) ==
 
 \* ACTION
 \* Follower i receives replSetInitiate and writes the first oplog entry, which is a no-op.
-\* Not needed for correctness, but modeled here because the implementation does it.
+\* Not needed for correctness, but modeled here to match the implementation.
 ReplSetInitiate(i) ==
     /\ Init
     /\ LET entry == [term |-> globalCurrentTerm]
