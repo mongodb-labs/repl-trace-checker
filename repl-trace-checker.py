@@ -49,6 +49,10 @@ def parse_args():
 
 
 def update_state(current_state, log_event):
+    next_repl_set_initiated = (True
+                               if log_event.action == "ReplSetInitiate"
+                               else current_state.replSetInitiated)
+
     # log is a tuple like (server 1's log, server 2's log, server 3's log),
     # same for state and commitPoint.
     next_log = list(current_state.log)
@@ -64,6 +68,7 @@ def update_state(current_state, log_event):
         n_servers=current_state.n_servers,
         action=log_event.action,
         globalCurrentTerm=log_event.term,
+        replSetInitiated=next_repl_set_initiated,
         log=tuple(next_log),
         state=tuple(next_server_state),
         commitPoint=tuple(next_commit_point),
@@ -121,6 +126,7 @@ def main(args):
         n_servers=n_servers,
         action='Init',
         globalCurrentTerm=-1,
+        replSetInitiated=False,
         log=((),) * n_servers,
         state=(ServerState.Follower,) * n_servers,
         commitPoint=({'term': -1, 'index': 0},) * n_servers,

@@ -9,7 +9,10 @@ CONSTANTS Server, MaxClientWriteSize
 ----
 \* Global variables
 
-\* The server's term number.
+\* Whether a client has called "replSetInitiate" on one of the servers.
+VARIABLE replSetInitiated
+
+\* The election term number.
 VARIABLE globalCurrentTerm
 
 ----
@@ -21,7 +24,7 @@ VARIABLE state
 \* The commit point learned by each server.
 VARIABLE commitPoint
 
-electionVars == <<globalCurrentTerm, state>>
+electionVars == <<replSetInitiated, globalCurrentTerm, state>>
 serverVars == <<electionVars, commitPoint>>
 
 \* A Sequence of log entries. The index into this sequence is the index of the
@@ -57,6 +60,7 @@ Max(s) == CHOOSE x \in s : \A y \in s : x >= y
 \* Define initial values for all variables
 
 InitServerVars == /\ globalCurrentTerm = -1
+                  /\ replSetInitiated  = FALSE
                   /\ state             = [i \in Server |-> "Follower"]
                   /\ commitPoint       = [i \in Server |-> [term |-> -1, index |-> 0]]
 InitLogVars == /\ log          = [i \in Server |-> << >>]
@@ -118,9 +122,18 @@ NeverRollbackCommitted ==
     \A i \in Server: ~RollbackCommitted(i)
 
 \* ACTION
+\* Follower i receives replSetInitiate and writes the first oplog entry, which is a no-op.
+\* Not needed for correctness, but modeled here to match the implementation.
+ReplSetInitiate(i) ==
+    /\ Init
+    /\ LET entry == [term |-> globalCurrentTerm]
+       IN /\ replSetInitiated' = TRUE
+          /\ log' = [log EXCEPT ![i] = Append(log[i], entry)]
+    /\ UNCHANGED <<globalCurrentTerm, state, commitPoint>>
+
+\* ACTION
 \* i = the new primary node.
 \* In the implementation, term starts at -1, then 1, then increments normally.
-\* TODO: model the no-op write?
 BecomePrimaryByMagic(i) ==
     LET notBehind(me, j) ==
             \/ LastTerm(log[me]) > LastTerm(log[j])
@@ -132,18 +145,7 @@ BecomePrimaryByMagic(i) ==
     IN /\ ayeVoters(i) \in Quorum
        /\ state' = [index \in Server |-> IF index = i THEN "Leader" ELSE "Follower"]
        /\ globalCurrentTerm' = nextTerm
-       /\ UNCHANGED <<commitPoint, logVars>>
-
-\* ACTION
-\* Follower i receives replSetInitiate and writes the first oplog entry, which is a no-op.
-\* Not needed for correctness, but modeled here to match the implementation.
-ReplSetInitiate(i) ==
-    /\ Init
-    /\ LET entry == [term |-> globalCurrentTerm]
-           newLog == Append(log[i], entry)
-       IN  log' = [log EXCEPT ![i] = newLog]
-    /\ UNCHANGED <<serverVars>>
-
+       /\ UNCHANGED <<replSetInitiated, commitPoint, logVars>>
 
 \* ACTION
 \* Leader i receives a client request to add one or more entries to the log.
@@ -154,7 +156,7 @@ ClientWrite(i) ==
             newEntries == [ j \in 1..numEntries |-> entry ]
             newLog == log[i] \o newEntries
         IN  log' = [log EXCEPT ![i] = newLog]
-    /\ UNCHANGED <<serverVars>>
+    /\ UNCHANGED <<replSetInitiated, serverVars>>
 
 \* ACTION
 AdvanceCommitPoint ==

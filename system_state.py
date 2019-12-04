@@ -39,26 +39,37 @@ class CommitPoint:
         return python_to_tla(dataclasses.asdict(self))
 
 
+def _raft_mongo_variable():
+    return dataclasses.field(metadata={'raft_mongo': True, 'tla': True})
+
+
+def _tla_variable():
+    return dataclasses.field(metadata={'tla': True})
+
+
 @repl_checker_dataclass(unsafe_hash=True)
 class SystemState:
     n_servers: int
 
-    action: str
+    action: str = _tla_variable()
     """The TLA+ action that led to this state."""
 
-    globalCurrentTerm: int
+    globalCurrentTerm: int = _raft_mongo_variable()
     """The globalCurrentTerm in the TLA+ spec."""
 
-    log: Tuple[Tuple[OplogEntry]]
+    replSetInitiated: bool = _raft_mongo_variable()
+    """Whether a client has called "replSetInitiate" on one of the servers."""
+
+    log: Tuple[Tuple[OplogEntry]] = _raft_mongo_variable()
     """A list of oplogs, one per server."""
 
-    state: Tuple[ServerState]
+    state: Tuple[ServerState] = _raft_mongo_variable()
     """A list of states, either Leader or Follower, one per server."""
 
-    commitPoint: Tuple[CommitPoint]
+    commitPoint: Tuple[CommitPoint] = _raft_mongo_variable()
     """Each server's view of the commit point, one OplogEntry per server."""
 
-    serverLogLocation: str
+    serverLogLocation: str = _tla_variable()
     """Filename:line of the mongod log that generated this state."""
 
     def __post_init__(self):
@@ -81,11 +92,13 @@ server {{ i }}: state={{ state[i] }}, commit point={{ commitPoint[i] }},
 
     @classmethod
     def raft_mongo_variables(cls):
-        return ('globalCurrentTerm', 'log', 'state', 'commitPoint')
+        return tuple((f.name for f in dataclasses.fields(cls)
+                      if f.metadata.get('raft_mongo')))
 
     @classmethod
     def all_tla_variables(cls):
-        return ('action', 'serverLogLocation') + cls.raft_mongo_variables()
+        return tuple((f.name for f in dataclasses.fields(cls)
+                      if f.metadata.get('tla')))
 
     def to_tla(self):
         return python_to_tla((getattr(self, name)
@@ -131,6 +144,9 @@ def python_to_tla(data):
     """Convert a Python object to a TLA+ expression string."""
     if hasattr(data, 'to_tla'):
         return data.to_tla()
+
+    if isinstance(data, bool):
+        return 'TRUE' if data else 'FALSE'
 
     # str is a Sequence, so check for str before Sequence.
     if isinstance(data, str):
