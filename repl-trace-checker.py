@@ -32,8 +32,8 @@ def parse_args():
         try:
             with open(arg, 'r'):
                 return arg
-        except IOError:
-            raise argparse.ArgumentError("Could not open file")
+        except OSError as e:
+            raise argparse.ArgumentTypeError(e)
 
     parser.add_argument(
         'specfile',
@@ -53,25 +53,27 @@ def update_state(current_state, log_event):
                                if log_event.action == "ReplSetInitiate"
                                else current_state.replSetInitiated)
 
-    # log is a tuple like (server 1's log, server 2's log, server 3's log),
-    # same for state and commitPoint.
-    next_log = list(current_state.log)
-    next_log[log_event.server_id] = log_event.log
+    # current_state.log is a tuple like:
+    #
+    #    (server 1's oplog, server 2's oplog, server 3's oplog)
+    #
+    # Same for state, term, and commitPoint. Update the value in each of these
+    # tuples for log_event's server.
 
-    next_server_state = list(current_state.state)
-    next_server_state[log_event.server_id] = log_event.state
-
-    next_commit_point = list(current_state.commitPoint)
-    next_commit_point[log_event.server_id] = log_event.commitPoint
+    def update(variable_name):
+        """In a list of values per server, replace the value for one server."""
+        next_values = list(getattr(current_state, variable_name))
+        next_values[log_event.server_id] = getattr(log_event, variable_name)
+        return tuple(next_values)
 
     return SystemState(
         n_servers=current_state.n_servers,
         action=log_event.action,
-        globalCurrentTerm=log_event.term,
         replSetInitiated=next_repl_set_initiated,
-        log=tuple(next_log),
-        state=tuple(next_server_state),
-        commitPoint=tuple(next_commit_point),
+        log=update('log'),
+        state=update('state'),
+        term=update('term'),
+        commitPoint=update('commitPoint'),
         serverLogLocation=log_event.location)
 
 
@@ -125,10 +127,10 @@ def main(args):
     current_state = SystemState(
         n_servers=n_servers,
         action='Init',
-        globalCurrentTerm=-1,
         replSetInitiated=False,
         log=((),) * n_servers,
         state=(ServerState.Follower,) * n_servers,
+        term=(-1,) * n_servers,
         commitPoint=({'term': -1, 'index': 0},) * n_servers,
         serverLogLocation="")
 

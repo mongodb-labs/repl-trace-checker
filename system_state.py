@@ -54,9 +54,6 @@ class SystemState:
     action: str = _tla_variable()
     """The TLA+ action that led to this state."""
 
-    globalCurrentTerm: int = _raft_mongo_variable()
-    """The globalCurrentTerm in the TLA+ spec."""
-
     replSetInitiated: bool = _raft_mongo_variable()
     """Whether a client has called "replSetInitiate" on one of the servers."""
 
@@ -65,6 +62,9 @@ class SystemState:
 
     state: Tuple[ServerState] = _raft_mongo_variable()
     """A list of states, either Leader or Follower, one per server."""
+
+    term: Tuple[ServerState] = _raft_mongo_variable()
+    """Each server's view of the current term."""
 
     commitPoint: Tuple[CommitPoint] = _raft_mongo_variable()
     """Each server's view of the commit point, one OplogEntry per server."""
@@ -77,9 +77,8 @@ class SystemState:
         assert len(self.state) == self.n_servers
         assert len(self.commitPoint) == self.n_servers
 
-    __pretty_template__ = """global term: {{ globalCurrentTerm }}
-{% for i in range(n_servers) -%}
-server {{ i }}: state={{ state[i] }}, commit point={{ commitPoint[i] }},
+    __pretty_template__ = """{% for i in range(n_servers) -%}
+server {{ i }}: state={{ state[i] }}, term={{ term[i] }}, commit point={{ commitPoint[i] }},
 {%- if log[i] %}
  log={{ log[i] | oplog }}
 {%- else %}
