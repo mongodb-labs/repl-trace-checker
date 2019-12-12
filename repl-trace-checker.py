@@ -181,7 +181,7 @@ def main(args):
         try:
             shutil.copy(args.specfile, inputs.dir_path)
             if args.keep_temp_spec:
-                print(f'Copied {args.specfile} to ${inputs.dir_path}')
+                print(f'Copied {args.specfile} to {inputs.dir_path}')
 
         except shutil.SameFileError:
             # --keep-temp-spec with a spec file in the current directory.
