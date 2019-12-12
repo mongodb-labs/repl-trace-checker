@@ -124,8 +124,8 @@ def main(args):
         action='Init',
         log=((),) * n_servers,
         state=(ServerState.Follower,) * n_servers,
-        term=(-1,) * n_servers,
-        commitPoint=({'term': -1, 'index': 0},) * n_servers,
+        term=(0,) * n_servers,
+        commitPoint=({'term': 0, 'index': 0},) * n_servers,
         serverLogLocation="")
 
     # Track the max number of oplog entries added in one event.

@@ -83,7 +83,11 @@ class LogEvent:
     server_id: int
     """The server's id (0-indexed)."""
     term: int
-    """The server's view of the term."""
+    """The server's view of the term.
+    
+    NOTE: The implementation's term starts at -1, then increases to 1, then
+    increments normally. We treat -1 as if it were 0.
+    """
     state: ServerState
     """The server's replica set member state."""
     commitPoint: CommitPoint
@@ -115,8 +119,12 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
 
         log = tuple(generate_oplog_entries())
 
+        # What the implementation calls -1, the spec calls 0.
+        def fixup_term(term):
+            return 0 if term == -1 else term
+
         commitPoint = CommitPoint(
-            term=raft_mongo['commitPoint']['t'],
+            term=fixup_term(raft_mongo['commitPoint']['t']),
             index=oplog_index_mapper.get_index(raft_mongo['commitPoint']['ts']))
 
         return LogEvent(timestamp=log_line.timestamp,
@@ -124,7 +132,7 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
                         line=log_line.line,
                         action=trace['action'],
                         server_id=port_mapper.get_server_id(port),
-                        term=raft_mongo['term'],
+                        term=fixup_term(raft_mongo['term']),
                         state=ServerState[raft_mongo['serverState']],
                         commitPoint=commitPoint,
                         log=log)
