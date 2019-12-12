@@ -54,9 +54,6 @@ class SystemState:
     action: str = _tla_variable()
     """The TLA+ action that led to this state."""
 
-    replSetInitiated: bool = _raft_mongo_variable()
-    """Whether a client has called "replSetInitiate" on one of the servers."""
-
     log: Tuple[Tuple[OplogEntry]] = _raft_mongo_variable()
     """A list of oplogs, one per server."""
 

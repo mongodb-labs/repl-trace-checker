@@ -49,10 +49,6 @@ def parse_args():
 
 
 def update_state(current_state, log_event):
-    next_repl_set_initiated = (True
-                               if log_event.action == "ReplSetInitiate"
-                               else current_state.replSetInitiated)
-
     # current_state.log is a tuple like:
     #
     #    (server 1's oplog, server 2's oplog, server 3's oplog)
@@ -69,7 +65,6 @@ def update_state(current_state, log_event):
     return SystemState(
         n_servers=current_state.n_servers,
         action=log_event.action,
-        replSetInitiated=next_repl_set_initiated,
         log=update('log'),
         state=update('state'),
         term=update('term'),
@@ -127,7 +122,6 @@ def main(args):
     current_state = SystemState(
         n_servers=n_servers,
         action='Init',
-        replSetInitiated=False,
         log=((),) * n_servers,
         state=(ServerState.Follower,) * n_servers,
         term=(-1,) * n_servers,
