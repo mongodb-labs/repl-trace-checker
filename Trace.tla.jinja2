@@ -65,4 +65,8 @@ THEOREM TraceBehavior => Model!Safety
 \* To verify, we check the spec TraceBehavior in TLC , with Model!Safety as a
 \* temporal property. As we’re always wary of success, we modify the above trace
 \* to ensure that TLC finds an error.
+
+\* Added by A. Jesse Jiryu Davis, for command-line model checking with TLC:
+Safety == Model!Safety
+
 ===============================================================================

@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import shutil
+import subprocess
 from tempfile import TemporaryDirectory
 
 import parse_log
@@ -112,6 +113,28 @@ class TLCInputs:
             self._tmp_dir.cleanup()
 
 
+def run_tlc(dir_path):
+    tla_bin_dir = os.path.join(this_dir, 'tla-bin')
+    tla_install_dir = os.path.join(this_dir, '.tla-bin-install')
+    download = os.path.join(tla_bin_dir, 'download_or_update_tla.sh')
+    install = os.path.join(tla_bin_dir, 'install.sh')
+
+    if not os.path.exists(os.path.join(this_dir, download)):
+        raise Exception("Must 'git submodule init' to install tla-bin")
+
+    def run(cmd, cwd):
+        code = subprocess.call(cmd, cwd=cwd)
+        if code != 0:
+            raise OSError(f'subprocess failed with code {code}')
+
+    run([download], cwd=tla_bin_dir)
+    run([install, tla_install_dir], cwd=tla_bin_dir)
+
+    tlc = os.path.join(tla_install_dir, 'bin/tlc')
+    trace_tla = os.path.join(dir_path, 'Trace.tla')
+    run([tlc, trace_tla], cwd=this_dir)
+
+
 def main(args):
     trace = []
     port_mapper = PortMapper()
@@ -181,7 +204,7 @@ def main(args):
             # --keep-temp-spec with a spec file in the current directory.
             pass
 
-        # TODO: Run tlc
+        run_tlc(inputs.dir_path)
 
 
 if __name__ == '__main__':

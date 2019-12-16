@@ -1,4 +1,5 @@
 .idea
+.tla-bin-install
 Trace.tla
 Trace.cfg
 Trace.toolbox/
