@@ -84,7 +84,7 @@ If the script finds a violation of the spec, you can use the
 * Under "What is the behavior spec?" choose "Temporal formula" and enter 
   "TraceBehavior".
 * Under "Properties" click "Add" and enter "Safety".
-![https://raw.githubusercontent.com/ajdavis/repl-trace-checker/master/readme-images/model-overview.png]
+![Model Overview](https://raw.githubusercontent.com/ajdavis/repl-trace-checker/master/readme-images/model-overview.png)
 * Choose "TLC Model Checker" -> "Run Model". You should see a violation error
 and an error trace.
 * In "Error-Trace Exploration" click "Add" and enter `Trace[i]`. Click 
@@ -92,7 +92,7 @@ and an error trace.
 * More information will be added to the error trace, including the spec action
   the server thought it took at each step, and the MongoDB server log line that
   generated each step.  
-![https://raw.githubusercontent.com/ajdavis/repl-trace-checker/master/readme-images/error-trace.png]
+![Error Trace](https://raw.githubusercontent.com/ajdavis/repl-trace-checker/master/readme-images/error-trace.png)
 
 ## Current status
 
