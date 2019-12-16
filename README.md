@@ -26,7 +26,7 @@ Specification with TLA+ and TLC.
 I want to check that an actual MongoDB replica set's series of state changes
 correspond to a sequence of steps in Siyuan Zhou's TLA+ spec, `RaftMongo.tla`.
 
-First I build mongod with extra tracing. Each time the server executes a step
+First I run mongod with extra tracing. Each time the server executes a step
 that is equivalent to one of the `RaftMongo.tla` actions (AppendOplog,
 RollbackOplog, BecomePrimaryByMagic, or ClientWrite), it logs the actual values
 of all variables that are modeled by the spec. I start a replica set, perform
@@ -50,43 +50,58 @@ creates a new TLA+ spec to check that this trace is permitted by
 
 **Run a replica set**
 
-* Clone [my "repl-trace-checker" MongoDB branch](https://github.com/ajdavis/mongo/tree/repl-trace-checker)
-* Build `mongod` and `mongo`
-* Run the script included at the top directory on my branch:
+* Build the most recent version of `mongod` and `mongo`.
+* Run the script included in this repository.
 ```
-./mongo --nodb sample-tla-plus-trace-replica-set.js
+./mongo --nodb sample-replica-set.js
 ```
 
 **Run the checker**
 
 * Clone this repository
 * With Python 3.6 or later:
+
 ```
 python -m pip install -r requirements.txt
-python repl-trace-checker.py <LOG1> <LOG2> ...
+python repl-trace-checker.py <LOG1> <LOG2> ... <SPEC>
 ```
 * Replace LOG1, LOG2, etc. with the `mongod.log` file of each replica.
+* Replace SPEC with the path to RaftMongo.tla.
 
 The script parses the mongod log files and generates a TLA+ spec which checks
 that the trace represented by the log files is permitted by `RaftMongo.tla`.
+The script installs or updates the TLA+ tools and runs the model checker program
+TLC on the generated spec.
+
+**Debug**
+
+If the script finds a violation of the spec, you can use the 
+[TLA+ Toolbox](https://github.com/tlaplus/tlaplus/releases) IDE to debug it.
+
+* Run `repl-trace-checker.py --keep-temp-spec`.
+* Open the generated Trace.tla in the TLA+ Toolbox.
+* Choose "TLC Model Checker" -> "New Model".
+* Under "What is the behavior spec?" choose "Temporal formula" and enter 
+  "TraceBehavior".
+* Under "Properties" click "Add" and enter "Safety".
+![https://raw.githubusercontent.com/ajdavis/repl-trace-checker/master/readme-images/model-overview.png]
+* Choose "TLC Model Checker" -> "Run Model". You should see a violation error
+and an error trace.
+* In "Error-Trace Exploration" click "Add" and enter `Trace[i]`. Click 
+  "Explore".
+* More information will be added to the error trace, including the spec action
+  the server thought it took at each step, and the MongoDB server log line that
+  generated each step.  
+![https://raw.githubusercontent.com/ajdavis/repl-trace-checker/master/readme-images/error-trace.png]
 
 ## Current status
 
-I have not yet added logging in the server implementations of the commit point
-learning protocol. Therefore the server's execution trace appears wrong: between 
-one AppendOplog action and the next, for example, its commit point advances, but 
-it never logs the AdvanceCommitPoint or similar action. The trace checker 
-considers this an error, as expected.
+Trace logging is implemented in mongod as of commit f515d2ad on MongoDB's master 
+branch. The RaftMongo.tla spec requires small updates to match the trace; these
+are in progress. 
 
 [Sample output from the trace checker](./sample-output.txt).
 
 ## Next Steps
 
-* Add logging to the server implementations of the TLA+ actions 
-  AdvanceCommitPoint, LearnCommitPointWithTermCheckAction, and 
-  LearnCommitPointFromSyncSourceNeverBeyondLastAppliedAction. 
 * Trigger a rollback and check its trace.
-* Introduce a bug in the actual replica set, traces should fail the checker.
-* Prevent oplog truncation while the actual replica set is running.
-* Note the trick for debugging traces: Add "Trace[i]" in the Toolbox's
-  "Error-Trace Exploration" box
