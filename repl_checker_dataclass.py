@@ -29,8 +29,16 @@ def pretty_oplog(oplog):
     return f'[{", ".join(gen())}]'
 
 
+def mongo_dt(dt):
+    """Format a Python datetime the same as MongoDB would log it."""
+    # strftime prints microseconds but MongoDB prints millis; strip 3 digits.
+    return (f"{dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3]}"
+            f"{dt.strftime('%z')}")
+
+
 _environment = Environment(lstrip_blocks=True, trim_blocks=True)
 _environment.filters['oplog'] = pretty_oplog
+_environment.filters['mongo_dt'] = mongo_dt
 _environment.globals['now'] = datetime.datetime.now
 
 
