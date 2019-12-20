@@ -95,8 +95,8 @@ class LogEvent:
     log: tuple
     """The server's oplog."""
 
-    __pretty_template__ = """{{ location }} at {{ timestamp }}
 {{ action }} server_id={{ server_id }} state={{ state.name }} term={{ term }}
+    __pretty_template__ = """{{ location }} at {{ timestamp | mongo_dt }}
 commit point: {{ commitPoint }}
 log: {{ log | oplog }}"""
 
