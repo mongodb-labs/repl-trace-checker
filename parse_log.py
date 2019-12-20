@@ -13,7 +13,7 @@ import re
 import sys
 from json import JSONDecodeError
 
-from bson import json_util  # pip install pymongo
+from bson import json_util, Timestamp  # pip install pymongo
 
 from repl_checker_dataclass import repl_checker_dataclass
 from system_state import OplogEntry, CommitPoint, ServerState
@@ -82,7 +82,7 @@ class LogEvent:
     """The action (in TLA+ spec terms) the server is taking."""
     server_id: int
     """The server's id (0-indexed)."""
-    term: int
+    currentTerm: int
     """The server's view of the term.
     
     NOTE: The implementation's term starts at -1, then increases to 1, then
@@ -95,10 +95,58 @@ class LogEvent:
     log: tuple
     """The server's oplog."""
 
-{{ action }} server_id={{ server_id }} state={{ state.name }} term={{ term }}
     __pretty_template__ = """{{ location }} at {{ timestamp | mongo_dt }}
+{{ action }} server_id={{ server_id }} state={{ state.name }} term={{ currentTerm }}
 commit point: {{ commitPoint }}
 log: {{ log | oplog }}"""
+
+
+def _fixup_term(term):
+    # What the implementation calls -1, the spec calls 0.
+    return 0 if term == -1 else term
+
+
+def _as_tuple(optime_dict):
+    return _fixup_term(optime_dict['t']), optime_dict['ts']
+
+
+class OplogIndexMapper:
+    """Maps MongoDB oplog timestamps to TLA+ log indexes, 0-indexed."""
+
+    def __init__(self):
+        self._optime_to_index = {(0, Timestamp(0, 0)): 0}
+        self._empty = True
+
+    def update(self, oplog):
+        # JSON oplog is a list of optimes with timestamp "ts" and term "t", like
+        # [{ts: Timestamp(1234, 1}, t: 1}, ...].
+        if not oplog:
+            return
+
+        start = _as_tuple(oplog[0])
+        if self._empty:
+            offset = 0
+        elif start in self._optime_to_index:
+            offset = self._optime_to_index[start]
+        else:
+            raise Exception(
+                f"Can't map optimes to TLA+ log indexes, encountered"
+                f" non-overlapping oplog segment starting at {start}. Saw"
+                f" optimes from {min(self._optime_to_index)} to"
+                f" {max(self._optime_to_index)} so far.")
+
+        for i in range(len(oplog)):
+            index = i + offset
+            optime = _as_tuple(oplog[i])
+            if optime in self._optime_to_index:
+                assert self._optime_to_index[optime] == index
+            else:
+                self._optime_to_index[optime] = index
+
+        self._empty = False
+
+    def get_index(self, optime):
+        return self._optime_to_index[_as_tuple(optime)]
 
 
 def parse_log_line(log_line, port_mapper, oplog_index_mapper):
@@ -109,33 +157,25 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
         raft_mongo = trace['state']
         port = int(trace['host'].split(':')[1])
 
-        # JSON oplog is a list of optimes with timestamp "ts" and term "t", like
-        # [{ts: {$timestamp: {t: 123, i: 4}}, t: {"$numberLong" : "1" }}, ...].
+        log = tuple(OplogEntry(term=entry['t']) for entry in raft_mongo['log'])
+
         # Update timestamp -> index map, which we use below for CommitPoint.
-        def generate_oplog_entries():
-            for index, entry in enumerate(raft_mongo['log']):
-                oplog_index_mapper.set_index(entry['ts'], index)
-                yield OplogEntry(term=entry['t'])
-
-        log = tuple(generate_oplog_entries())
-
-        # What the implementation calls -1, the spec calls 0.
-        def fixup_term(term):
-            return 0 if term == -1 else term
+        oplog_index_mapper.update(raft_mongo['log'])
 
         commitPoint = CommitPoint(
-            term=fixup_term(raft_mongo['commitPoint']['t']),
-            index=oplog_index_mapper.get_index(raft_mongo['commitPoint']['ts']))
+            term=_fixup_term(raft_mongo['commitPoint']['t']),
+            index=oplog_index_mapper.get_index(raft_mongo['commitPoint']))
 
         return LogEvent(timestamp=log_line.timestamp,
                         location=log_line.location,
                         line=log_line.line,
                         action=trace['action'],
                         server_id=port_mapper.get_server_id(port),
-                        term=fixup_term(raft_mongo['term']),
+                        currentTerm=_fixup_term(raft_mongo['currentTerm']),
                         state=ServerState[raft_mongo['serverState']],
                         commitPoint=commitPoint,
                         log=log)
     except Exception:
-        print('Exception parsing line: {!r}'.format(log_line))
+        print(f'Exception at {log_line.location}: {log_line.line}',
+              file=sys.stderr)
         raise

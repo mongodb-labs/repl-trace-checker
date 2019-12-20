@@ -73,10 +73,27 @@ that the trace represented by the log files is permitted by `RaftMongo.tla`.
 The script installs or updates the TLA+ tools and runs the model checker program
 TLC on the generated spec.
 
+Caveats:
+* If a mongod's log is split across several files, they must be merged in
+  chronological order into one file.
+* The replica set must never be single-node (because single-node sets handle
+  the commitPoint differently from the RaftMongo.tla spec). You must disable
+  replsettest.js's default behavior of initializing a set with one node and then
+  adding the remainder of the nodes, see SERVER-45228.
+* Auth is not supported (it writes system.keys entries that are 
+  majority-committed during initial sync as the replica set is initialized,
+  which violates RaftMongo.tla).
+
 **Debug**
 
-If the script finds a violation of the spec, you can use the 
-[TLA+ Toolbox](https://github.com/tlaplus/tlaplus/releases) IDE to debug it.
+When the script finds a violation of the spec it logs something unhelpful like:
+
+```
+Error: Action property line 274, col 19 to line 274, col 31 of module RaftMongo is violated.
+```
+
+You can use the [TLA+ Toolbox](https://github.com/tlaplus/tlaplus/releases) IDE 
+to debug it.
 
 * Run `repl-trace-checker.py --keep-temp-spec`.
 * Open the generated Trace.tla in the TLA+ Toolbox.

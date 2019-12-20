@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 
 import parse_log
 from repl_checker_dataclass import jinja2_template_from_string
-from system_state import OplogIndexMapper, PortMapper, ServerState, SystemState
+from system_state import PortMapper, ServerState, SystemState
 
 this_dir = os.path.realpath(os.path.dirname(__file__))
 
@@ -54,8 +54,8 @@ def update_state(current_state, log_event):
     #
     #    (server 1's oplog, server 2's oplog, server 3's oplog)
     #
-    # Same for state, term, and commitPoint. Update the value in each of these
-    # tuples for log_event's server.
+    # Same for state, currentTerm, and commitPoint. Update the value in each of
+    # these tuples for log_event's server.
 
     def update(variable_name):
         """In a list of values per server, replace the value for one server."""
@@ -68,7 +68,7 @@ def update_state(current_state, log_event):
         action=log_event.action,
         log=update('log'),
         state=update('state'),
-        term=update('term'),
+        currentTerm=update('currentTerm'),
         commitPoint=update('commitPoint'),
         serverLogLocation=log_event.location)
 
@@ -138,7 +138,7 @@ def run_tlc(dir_path):
 def main(args):
     trace = []
     port_mapper = PortMapper()
-    oplog_index_mapper = OplogIndexMapper()
+    oplog_index_mapper = parse_log.OplogIndexMapper()
 
     # TODO: How to get the initial state from the spec? Can TLC help?
     n_servers = len(args.logfile)
@@ -147,7 +147,7 @@ def main(args):
         action='Init',
         log=((),) * n_servers,
         state=(ServerState.Follower,) * n_servers,
-        term=(0,) * n_servers,
+        currentTerm=(0,) * n_servers,
         commitPoint=({'term': 0, 'index': 0},) * n_servers,
         serverLogLocation="")
 

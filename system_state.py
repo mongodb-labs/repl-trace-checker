@@ -3,8 +3,6 @@ import enum
 from collections.abc import Generator, Mapping, Sequence
 from typing import Tuple
 
-from bson import Timestamp
-
 from repl_checker_dataclass import repl_checker_dataclass
 
 
@@ -60,7 +58,7 @@ class SystemState:
     state: Tuple[ServerState] = _raft_mongo_variable()
     """A list of states, either Leader or Follower, one per server."""
 
-    term: Tuple[ServerState] = _raft_mongo_variable()
+    currentTerm: Tuple[ServerState] = _raft_mongo_variable()
     """Each server's view of the current term."""
 
     commitPoint: Tuple[CommitPoint] = _raft_mongo_variable()
@@ -75,7 +73,7 @@ class SystemState:
         assert len(self.commitPoint) == self.n_servers
 
     __pretty_template__ = """{% for i in range(n_servers) -%}
-server {{ i }}: state={{ state[i] }}, term={{ term[i] }}, commit point={{ commitPoint[i] }},
+server {{ i }}: state={{ state[i] }}, term={{ currentTerm[i] }}, commit point={{ commitPoint[i] }},
 {%- if log[i] %}
  log={{ log[i] | oplog }}
 {%- else %}
@@ -118,22 +116,6 @@ class PortMapper:
             self.next_server_id += 1
 
         return self.port_to_server[port]
-
-
-class OplogIndexMapper:
-    """Maps MongoDB oplog timestamps to TLA+ log indexes, 0-indexed."""
-
-    def __init__(self):
-        self._ts_to_index = {Timestamp(0, 0): 0}
-
-    def set_index(self, timestamp, index):
-        if timestamp in self._ts_to_index:
-            assert self._ts_to_index[timestamp] == index
-        else:
-            self._ts_to_index[timestamp] = index
-
-    def get_index(self, timestamp):
-        return self._ts_to_index[timestamp]
 
 
 def python_to_tla(data):
