@@ -12,11 +12,12 @@ const rst = new ReplSetTest({
 });
 
 rst.startSet();
-// Skip ReplSetTest's usual logic of initiating a 1-node set and adding the others: we want as
-// simple a startup sequence as possible.
-const config = rst.getReplSetConfig();
-jsTestLog(`reconfig: ${tojson(config)}`);
-assert.commandWorked(rst.nodes[0].getDB('admin').runCommand({replSetInitiate: config}));
+// Skip ReplSetTest's usual logic of initiating a 1-node set and adding the
+// others: RaftMongo.tla doesn't support 1-node sets.
+assert.commandWorked(rst.nodes[0].getDB('admin').runCommand({
+    replSetInitiate: rst.getReplSetConfig()}));
+
+rst.awaitSecondaryNodes();
 const db = rst.getPrimary().getDB('test');
 const wc = {w: 'majority', wtimeout: 10000};
 jsTestLog("single insert");
