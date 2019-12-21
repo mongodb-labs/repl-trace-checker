@@ -12,6 +12,7 @@ import heapq
 import re
 import sys
 from json import JSONDecodeError
+from typing import Dict, Tuple
 
 from bson import json_util, Timestamp  # pip install pymongo
 
@@ -40,10 +41,10 @@ class LogLine:
     obj: dict
 
 
-def merge_log_streams(streams):
-    """Merge logs, sorting by timestamp."""
+def parse_log(stream):
+    """Yield LogLines parsed from a log file stream."""
 
-    def gen(stream):
+    def gen():
         line_number = 0
         for line in stream:
             line_number += 1
@@ -67,7 +68,12 @@ def merge_log_streams(streams):
                           line=line,
                           obj=obj)
 
-    return heapq.merge(*map(gen, streams))
+    return list(gen())
+
+
+def merge_log_streams(streams):
+    """Merge logs, sorting by timestamp."""
+    return heapq.merge(*map(parse_log, streams))
 
 
 @repl_checker_dataclass
@@ -112,41 +118,29 @@ def _as_tuple(optime_dict):
 
 class OplogIndexMapper:
     """Maps MongoDB oplog timestamps to TLA+ log indexes, 0-indexed."""
+    _optime_to_entry: Dict[Tuple[int, Timestamp], OplogEntry]
 
     def __init__(self):
-        self._optime_to_index = {(0, Timestamp(0, 0)): 0}
-        self._empty = True
+        # The "null" commitPoint is 0,0. Fake an OplogEntry for it.
+        null_entry = OplogEntry(term=0, index=0, previous=None)
+        self._optime_to_entry = {(0, Timestamp(0, 0)): null_entry}
 
-    def update(self, oplog):
-        # JSON oplog is a list of optimes with timestamp "ts" and term "t", like
-        # [{ts: Timestamp(1234, 1}, t: 1}, ...].
-        if not oplog:
-            return
+    def has_entry(self, optime):
+        """True if there is an OplogEntry for {ts: <Timestamp>, t: <int>}."""
+        return _as_tuple(optime) in self._optime_to_entry
 
-        start = _as_tuple(oplog[0])
-        if self._empty:
-            offset = 0
-        elif start in self._optime_to_index:
-            offset = self._optime_to_index[start]
+    def get_entry(self, optime):
+        """Get OplogEntry for {ts: <Timestamp>, t: <int>}."""
+        return self._optime_to_entry[_as_tuple(optime)]
+
+    def add_entry(self, optime, entry):
+        """Add mapping from {ts: <Timestamp>, t: <int>} to OplogEntry object."""
+        key = _as_tuple(optime)
+        if key in self._optime_to_entry:
+            old_entry = self._optime_to_entry[key]
+            assert old_entry == entry
         else:
-            raise Exception(
-                f"Can't map optimes to TLA+ log indexes, encountered"
-                f" non-overlapping oplog segment starting at {start}. Saw"
-                f" optimes from {min(self._optime_to_index)} to"
-                f" {max(self._optime_to_index)} so far.")
-
-        for i in range(len(oplog)):
-            index = i + offset
-            optime = _as_tuple(oplog[i])
-            if optime in self._optime_to_index:
-                assert self._optime_to_index[optime] == index
-            else:
-                self._optime_to_index[optime] = index
-
-        self._empty = False
-
-    def get_index(self, optime):
-        return self._optime_to_index[_as_tuple(optime)]
+            self._optime_to_entry[key] = entry
 
 
 def parse_log_line(log_line, port_mapper, oplog_index_mapper):
@@ -157,14 +151,35 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
         raft_mongo = trace['state']
         port = int(trace['host'].split(':')[1])
 
-        log = tuple(OplogEntry(term=entry['t']) for entry in raft_mongo['log'])
+        if raft_mongo['log']:
+            # If the server's oplog was truncated, fill in the missing entries
+            # by recalling the oldest entry's ancestors.
+            optime = raft_mongo['log'][0]
+            if oplog_index_mapper.has_entry(optime):
+                previous_entry = oplog_index_mapper.get_entry(optime)
+                index = previous_entry.index + 1
+            else:
+                previous_entry = OplogEntry(term=optime['t'],
+                                            index=0,
+                                            previous=None)
+                # Note: 1-indexed.
+                index = 1
 
-        # Update timestamp -> index map, which we use below for CommitPoint.
-        oplog_index_mapper.update(raft_mongo['log'])
+            for optime in raft_mongo['log'][1:]:
+                entry = OplogEntry(term=optime['t'],
+                                   index=index,
+                                   previous=previous_entry)
+                oplog_index_mapper.add_entry(optime, entry)
+                previous_entry = entry
+                index += 1
+
+            log = previous_entry.get_full_oplog()
+        else:
+            log = ()
 
         commitPoint = CommitPoint(
             term=_fixup_term(raft_mongo['commitPoint']['t']),
-            index=oplog_index_mapper.get_index(raft_mongo['commitPoint']))
+            index=oplog_index_mapper.get_entry(raft_mongo['commitPoint']).index)
 
         return LogEvent(timestamp=log_line.timestamp,
                         location=log_line.location,
@@ -174,7 +189,7 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
                         currentTerm=_fixup_term(raft_mongo['currentTerm']),
                         state=ServerState[raft_mongo['serverState']],
                         commitPoint=commitPoint,
-                        log=log)
+                        log=log)  # TODO: just the latest entry
     except Exception:
         print(f'Exception at {log_line.location}: {log_line.line}',
               file=sys.stderr)

@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import dataclasses
 import enum
 from collections.abc import Generator, Mapping, Sequence
-from typing import Tuple
+from typing import Tuple, Optional
 
 from repl_checker_dataclass import repl_checker_dataclass
 
@@ -23,9 +25,19 @@ ServerState._max_name_length = max(len(e.name) for e in ServerState)
 @repl_checker_dataclass(unsafe_hash=True)
 class OplogEntry:
     term: int
+    index: int
+    # Self ref requires future import of annotations.
+    previous: Optional[OplogEntry]
 
     def to_tla(self):
-        return python_to_tla(dataclasses.asdict(self))
+        return python_to_tla({'term': self.term})
+
+    def get_full_oplog(self):
+        """A tuple of OplogEntry objects ending with self."""
+        if not self.previous:
+            return (self,)
+
+        return self.previous.get_full_oplog() + (self,)
 
 
 @repl_checker_dataclass(unsafe_hash=True)

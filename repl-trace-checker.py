@@ -135,12 +135,12 @@ def run_tlc(dir_path):
 
 
 def main(args):
-    trace = []
-    port_mapper = PortMapper()
-    oplog_index_mapper = parse_log.OplogIndexMapper()
+    merged_logs = list(parse_log.merge_log_streams(args.logfile))
+    servers = set(log_line.obj['host'] for log_line in merged_logs)
+    logging.info(f'Servers: {servers}')
 
     # TODO: How to get the initial state from the spec? Can TLC help?
-    n_servers = len(args.logfile)
+    n_servers = len(servers)
     current_state = SystemState(
         n_servers=n_servers,
         action='Init',
@@ -152,9 +152,11 @@ def main(args):
 
     # Track the max number of oplog entries added in one event.
     max_client_write_size = 0
+    trace = []
+    port_mapper = PortMapper()
+    oplog_index_mapper = parse_log.OplogIndexMapper()
 
-    for i, log_line in enumerate(parse_log.merge_log_streams(args.logfile),
-                                 start=1):
+    for i, log_line in enumerate(merged_logs, start=1):
         log_event = parse_log.parse_log_line(
             log_line, port_mapper, oplog_index_mapper)
         logging.info(
