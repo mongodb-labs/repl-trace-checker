@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 from tempfile import TemporaryDirectory
 
 import parse_log
@@ -123,9 +124,7 @@ def run_tlc(dir_path):
         raise Exception("Must 'git submodule init' to install tla-bin")
 
     def run(cmd, cwd):
-        code = subprocess.call(cmd, cwd=cwd)
-        if code != 0:
-            raise OSError(f'subprocess failed with code {code}')
+        subprocess.check_call(cmd, cwd=cwd)
 
     run([download], cwd=tla_bin_dir)
     run([install, tla_install_dir], cwd=tla_bin_dir)
@@ -204,8 +203,13 @@ def main(args):
             # --keep-temp-spec with a spec file in the current directory.
             pass
 
-        run_tlc(inputs.dir_path)
+        try:
+            run_tlc(inputs.dir_path)
+            return 0
+        except subprocess.SubprocessError as exc:
+            print(exc)
+            return exc.returncode
 
 
 if __name__ == '__main__':
-    main(parse_args())
+    sys.exit(main(parse_args()))
