@@ -124,10 +124,7 @@ class OplogIndexMapper:
         # The "null" commitPoint is 0,0. Fake an OplogEntry for it.
         null_entry = OplogEntry(term=0, index=0, previous=None)
         self._optime_to_entry = {(0, Timestamp(0, 0)): null_entry}
-
-    def has_entry(self, optime):
-        """True if there is an OplogEntry for {ts: <Timestamp>, t: <int>}."""
-        return _as_tuple(optime) in self._optime_to_entry
+        self._empty = True
 
     def get_entry(self, optime):
         """Get OplogEntry for {ts: <Timestamp>, t: <int>}."""
@@ -141,6 +138,11 @@ class OplogIndexMapper:
             assert old_entry == entry
         else:
             self._optime_to_entry[key] = entry
+        self._empty = False
+
+    @property
+    def empty(self):
+        return self._empty
 
 
 def parse_log_line(log_line, port_mapper, oplog_index_mapper):
@@ -148,32 +150,30 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
     try:
         # Generic logging is in "trace", RaftMongo.tla-specific in "raft_mongo".
         trace = log_line.obj
-        raft_mongo = trace['state']
         port = int(trace['host'].split(':')[1])
+        raft_mongo = trace['state']
+        optimes = raft_mongo['log']
 
-        if raft_mongo['log']:
-            # If the server's oplog was truncated, fill in the missing entries
-            # by recalling the oldest entry's ancestors.
-            optime = raft_mongo['log'][0]
-            if oplog_index_mapper.has_entry(optime):
-                previous_entry = oplog_index_mapper.get_entry(optime)
-                index = previous_entry.index + 1
-            else:
-                previous_entry = OplogEntry(term=optime['t'],
-                                            index=0,
-                                            previous=None)
-                # Note: 1-indexed.
-                index = 1
+        if optimes:
+            if oplog_index_mapper.empty:
+                # Add first entry at index 1.
+                oplog_index_mapper.add_entry(
+                    optimes[0],
+                    OplogEntry(term=optimes[0]['t'],
+                               index=1,
+                               previous=None))
 
-            for optime in raft_mongo['log'][1:]:
-                entry = OplogEntry(term=optime['t'],
-                                   index=index,
-                                   previous=previous_entry)
-                oplog_index_mapper.add_entry(optime, entry)
-                previous_entry = entry
-                index += 1
+            # Iterate consecutive pairs of entries.
+            for optime_a, optime_b in zip(optimes, optimes[1:]):
+                # The previous optime must already have an OplogEntry.
+                previous = oplog_index_mapper.get_entry(optime_a)
+                oplog_index_mapper.add_entry(
+                    optime_b,
+                    OplogEntry(term=optime_b['t'],
+                               index=previous.index + 1,
+                               previous=previous))
 
-            log = previous_entry.get_full_oplog()
+            log = oplog_index_mapper.get_entry(optimes[-1]).get_complete_log()
         else:
             log = ()
 
@@ -189,7 +189,7 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
                         currentTerm=_fixup_term(raft_mongo['currentTerm']),
                         state=ServerState[raft_mongo['serverState']],
                         commitPoint=commitPoint,
-                        log=log)  # TODO: just the latest entry
+                        log=log)
     except Exception:
         print(f'Exception at {log_line.location}: {log_line.line}',
               file=sys.stderr)

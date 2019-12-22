@@ -32,12 +32,12 @@ class OplogEntry:
     def to_tla(self):
         return python_to_tla({'term': self.term})
 
-    def get_full_oplog(self):
-        """A tuple of OplogEntry objects ending with self."""
+    def get_complete_log(self):
+        """Tuple of all oplog entries, ending in self."""
         if not self.previous:
             return (self,)
 
-        return self.previous.get_full_oplog() + (self,)
+        return self.previous.get_complete_log() + (self,)
 
 
 @repl_checker_dataclass(unsafe_hash=True)
