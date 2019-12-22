@@ -88,7 +88,7 @@ class LogEvent:
     """The action (in TLA+ spec terms) the server is taking."""
     server_id: int
     """The server's id (0-indexed)."""
-    currentTerm: int
+    term: int
     """The server's view of the term.
     
     NOTE: The implementation's term starts at -1, then increases to 1, then
@@ -102,7 +102,7 @@ class LogEvent:
     """The server's oplog."""
 
     __pretty_template__ = """{{ location }} at {{ timestamp | mongo_dt }}
-{{ action }} server_id={{ server_id }} state={{ state.name }} term={{ currentTerm }}
+{{ action }} server_id={{ server_id }} state={{ state.name }} term={{ term }}
 commit point: {{ commitPoint }}
 log: {{ log | oplog }}"""
 
@@ -186,7 +186,7 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
                         line=log_line.line,
                         action=trace['action'],
                         server_id=port_mapper.get_server_id(port),
-                        currentTerm=_fixup_term(raft_mongo['currentTerm']),
+                        term=_fixup_term(raft_mongo['term']),
                         state=ServerState[raft_mongo['serverState']],
                         commitPoint=commitPoint,
                         log=log)

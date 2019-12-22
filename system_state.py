@@ -61,6 +61,9 @@ def _tla_variable():
 class SystemState:
     n_servers: int
 
+    globalCurrentTerm: int = _raft_mongo_variable()
+    """The maximum term known by any server."""
+
     action: str = _tla_variable()
     """The TLA+ action that led to this state."""
 
@@ -69,9 +72,6 @@ class SystemState:
 
     state: Tuple[ServerState] = _raft_mongo_variable()
     """A list of states, either Leader or Follower, one per server."""
-
-    currentTerm: Tuple[ServerState] = _raft_mongo_variable()
-    """Each server's view of the current term."""
 
     commitPoint: Tuple[CommitPoint] = _raft_mongo_variable()
     """Each server's view of the commit point, one OplogEntry per server."""
@@ -84,8 +84,10 @@ class SystemState:
         assert len(self.state) == self.n_servers
         assert len(self.commitPoint) == self.n_servers
 
-    __pretty_template__ = """{% for i in range(n_servers) -%}
-server {{ i }}: state={{ state[i] }}, term={{ currentTerm[i] }}, commit point={{ commitPoint[i] }},
+
+    __pretty_template__ = """globalCurrentTerm={{ globalCurrentTerm }}
+{% for i in range(n_servers) -%}
+server {{ i }}: state={{ state[i] }}, commit point={{ commitPoint[i] }},
 {%- if log[i] %}
  log={{ log[i] | oplog }}
 {%- else %}

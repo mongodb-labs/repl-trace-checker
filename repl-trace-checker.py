@@ -55,8 +55,8 @@ def update_state(current_state, log_event):
     #
     #    (server 1's oplog, server 2's oplog, server 3's oplog)
     #
-    # Same for state, currentTerm, and commitPoint. Update the value in each of
-    # these tuples for log_event's server.
+    # Same for state and commitPoint. Update the value in each of these tuples
+    # for log_event's server.
 
     def update(variable_name):
         """In a list of values per server, replace the value for one server."""
@@ -66,10 +66,10 @@ def update_state(current_state, log_event):
 
     return SystemState(
         n_servers=current_state.n_servers,
+        globalCurrentTerm=max(current_state.globalCurrentTerm, log_event.term),
         action=log_event.action,
         log=update('log'),
         state=update('state'),
-        currentTerm=update('currentTerm'),
         commitPoint=update('commitPoint'),
         serverLogLocation=log_event.location)
 
@@ -143,10 +143,10 @@ def main(args):
     n_servers = len(servers)
     current_state = SystemState(
         n_servers=n_servers,
+        globalCurrentTerm=0,
         action='Init',
         log=((),) * n_servers,
         state=(ServerState.Follower,) * n_servers,
-        currentTerm=(0,) * n_servers,
         commitPoint=({'term': 0, 'index': 0},) * n_servers,
         serverLogLocation="")
 
