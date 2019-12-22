@@ -57,16 +57,13 @@ TraceBehavior == Init /\ [][Next]_<<vars, i>>
 
 \* Because we’re dealing with a finite trace, we only care about safety
 \* properties, as liveness concerns only infinite behaviors.
-\* TODO: Requires a property named "Safety" in spec? Explain in the paper.
-\* TODO: What does this line accomplish? I find adding TraceBehavior to TLA+
-\*   Toolbox "Properties" does nothing, but adding Model!Safety works.
-THEOREM TraceBehavior => Model!Safety
+THEOREM TraceBehavior => Model!SpecBehavior
 
-\* To verify, we check the spec TraceBehavior in TLC , with Model!Safety as a
-\* temporal property. As we’re always wary of success, we modify the above trace
-\* to ensure that TLC finds an error.
+\* To verify, we check the spec TraceBehavior in TLC , with Model!SpecBehavior
+\* as a temporal property. As we’re always wary of success, we modify the above
+\* trace to ensure that TLC finds an error.
 
 \* Added by A. Jesse Jiryu Davis, for command-line model checking with TLC:
-Safety == Model!Safety
+SpecBehavior == Model!SpecBehavior
 
 ===============================================================================

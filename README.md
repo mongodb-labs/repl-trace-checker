@@ -100,7 +100,7 @@ to debug it.
 * Choose "TLC Model Checker" -> "New Model".
 * Under "What is the behavior spec?" choose "Temporal formula" and enter 
   "TraceBehavior".
-* Under "Properties" click "Add" and enter "Safety".
+* Under "Properties" click "Add" and enter "SpecBehavior".
 ![Model Overview](https://raw.githubusercontent.com/ajdavis/repl-trace-checker/master/readme-images/model-overview.png)
 * Choose "TLC Model Checker" -> "Run Model". You should see a violation error
 and an error trace.
