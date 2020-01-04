@@ -23,6 +23,13 @@ ServerState._max_name_length = max(len(e.name) for e in ServerState)
 
 
 @repl_checker_dataclass(unsafe_hash=True)
+class OpTime:
+    term: int
+    timestamp: int
+    """Timestamp as unsigned long long."""
+
+
+@repl_checker_dataclass(unsafe_hash=True)
 class OplogEntry:
     term: int
     index: int

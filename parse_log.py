@@ -9,15 +9,14 @@ enabled like:
 """
 import datetime
 import heapq
+import json
 import re
 import sys
 from json import JSONDecodeError
-from typing import Dict, Tuple
-
-from bson import json_util, Timestamp  # pip install pymongo
+from typing import Dict
 
 from repl_checker_dataclass import repl_checker_dataclass
-from system_state import OplogEntry, CommitPoint, ServerState
+from system_state import OplogEntry, CommitPoint, ServerState, OpTime
 
 # Match lines like:
 # 2019-07-16T12:24:41.964-0400 I  TLA_PLUS_TRACE [replexec-0]
@@ -54,8 +53,7 @@ def parse_log(stream):
 
             timestamp = parse_log_timestamp(match.group('timestamp'))
             try:
-                # json_util converts e.g. $numberLong to Python int.
-                obj = json_util.loads(match.group('json'))
+                obj = json.loads(match.group('json'))
             except JSONDecodeError as exc:
                 print(f"Invalid JSON in {stream.name}:{line_number}"
                       f" {exc.msg} in column {exc.colno}:\n"
@@ -107,37 +105,44 @@ commit point: {{ commitPoint }}
 log: {{ log | oplog }}"""
 
 
-def _fixup_term(term):
+def _parse_term(term):
     # What the implementation calls -1, the spec calls 0.
-    return 0 if term == -1 else term
+    return 0 if term == '-1' else int(term)
 
 
-def _as_tuple(optime_dict):
-    return _fixup_term(optime_dict['t']), optime_dict['ts']
+def _parse_optime(obj):
+    """ Convert an OpTime from JSON."""
+    # obj is like:
+    #
+    #     {ts: {$timestamp: {t: 1578078726, i: 5}}, t: {$numberLong: '1'}}
+    #
+    # PyMongo's bson.json_util converts timestamp and numberLong objects but
+    # it's more performant to special-case that logic here.
+    as_int = obj['ts']['$timestamp']['t'] << 32 | obj['ts']['$timestamp']['i']
+    return OpTime(term=_parse_term(obj['t']['$numberLong']), timestamp=as_int)
 
 
 class OplogIndexMapper:
     """Maps MongoDB oplog timestamps to TLA+ log indexes, 0-indexed."""
-    _optime_to_entry: Dict[Tuple[int, Timestamp], OplogEntry]
+    _optime_to_entry: Dict[OpTime, OplogEntry]
 
     def __init__(self):
-        # The "null" commitPoint is 0,0. Fake an OplogEntry for it.
+        # The "null" commitPoint is (0, 0). Fake an OplogEntry for it.
         null_entry = OplogEntry(term=0, index=0, previous=None)
-        self._optime_to_entry = {(0, Timestamp(0, 0)): null_entry}
+        self._optime_to_entry = {OpTime(0, 0): null_entry}
         self._empty = True
 
     def get_entry(self, optime):
-        """Get OplogEntry for {ts: <Timestamp>, t: <int>}."""
-        return self._optime_to_entry[_as_tuple(optime)]
+        """Get OplogEntry for OpTime."""
+        return self._optime_to_entry[optime]
 
     def add_entry(self, optime, entry):
-        """Add mapping from {ts: <Timestamp>, t: <int>} to OplogEntry object."""
-        key = _as_tuple(optime)
-        if key in self._optime_to_entry:
-            old_entry = self._optime_to_entry[key]
+        """Add mapping from OpTime to OplogEntry object."""
+        if optime in self._optime_to_entry:
+            old_entry = self._optime_to_entry[optime]
             assert old_entry == entry
         else:
-            self._optime_to_entry[key] = entry
+            self._optime_to_entry[optime] = entry
         self._empty = False
 
     @property
@@ -152,14 +157,14 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
         trace = log_line.obj
         port = int(trace['host'].split(':')[1])
         raft_mongo = trace['state']
-        optimes = raft_mongo['log']
+        optimes = [_parse_optime(optime) for optime in raft_mongo['log']]
 
         if optimes:
             if oplog_index_mapper.empty:
                 # Add first entry at index 1.
                 oplog_index_mapper.add_entry(
                     optimes[0],
-                    OplogEntry(term=optimes[0]['t'],
+                    OplogEntry(term=optimes[0].term,
                                index=1,
                                previous=None))
 
@@ -169,7 +174,7 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
                 previous = oplog_index_mapper.get_entry(optime_a)
                 oplog_index_mapper.add_entry(
                     optime_b,
-                    OplogEntry(term=optime_b['t'],
+                    OplogEntry(term=optime_b.term,
                                index=previous.index + 1,
                                previous=previous))
 
@@ -177,16 +182,17 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
         else:
             log = ()
 
+        commitPointOpTime = _parse_optime(raft_mongo['commitPoint'])
         commitPoint = CommitPoint(
-            term=_fixup_term(raft_mongo['commitPoint']['t']),
-            index=oplog_index_mapper.get_entry(raft_mongo['commitPoint']).index)
+            term=commitPointOpTime.term,
+            index=oplog_index_mapper.get_entry(commitPointOpTime).index)
 
         return LogEvent(timestamp=log_line.timestamp,
                         location=log_line.location,
                         line=log_line.line,
                         action=trace['action'],
                         server_id=port_mapper.get_server_id(port),
-                        term=_fixup_term(raft_mongo['term']),
+                        term=_parse_term(raft_mongo['term']['$numberLong']),
                         state=ServerState[raft_mongo['serverState']],
                         commitPoint=commitPoint,
                         log=log)
