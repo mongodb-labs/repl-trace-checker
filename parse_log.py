@@ -9,11 +9,12 @@ enabled like:
 """
 import datetime
 import heapq
-import json
 import re
 import sys
 from json import JSONDecodeError
 from typing import Dict
+
+import orjson
 
 from repl_checker_dataclass import repl_checker_dataclass
 from system_state import OplogEntry, CommitPoint, ServerState, OpTime
@@ -53,7 +54,7 @@ def parse_log(stream):
 
             timestamp = parse_log_timestamp(match.group('timestamp'))
             try:
-                obj = json.loads(match.group('json'))
+                obj = orjson.loads(match.group('json'))
             except JSONDecodeError as exc:
                 print(f"Invalid JSON in {stream.name}:{line_number}"
                       f" {exc.msg} in column {exc.colno}:\n"
