@@ -135,6 +135,7 @@ def run_tlc(dir_path):
 
 
 def main(args):
+    logging.info('Reading logs')
     merged_logs = list(parse_log.merge_log_streams(args.logfile))
     servers = set(log_line.obj['host'] for log_line in merged_logs)
     logging.info(f'Servers: {servers}')
