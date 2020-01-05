@@ -41,10 +41,14 @@ class OplogEntry:
 
     def get_complete_log(self):
         """Tuple of all oplog entries, ending in self."""
-        if not self.previous:
-            return (self,)
+        # Avoid recursion, we could hit Python's recursion limit.
+        oplog = []
+        current = self
+        while current:
+            oplog.append(current)
+            current = current.previous
 
-        return self.previous.get_complete_log() + (self,)
+        return tuple(reversed(oplog))
 
 
 @repl_checker_dataclass(unsafe_hash=True)
