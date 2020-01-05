@@ -91,7 +91,6 @@ class SystemState:
         assert len(self.state) == self.n_servers
         assert len(self.commitPoint) == self.n_servers
 
-
     __pretty_template__ = """globalCurrentTerm={{ globalCurrentTerm }}
 {% for i in range(n_servers) -%}
 server {{ i }}: state={{ state[i] }}, commit point={{ commitPoint[i] }},
