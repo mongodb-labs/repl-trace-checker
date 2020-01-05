@@ -6,16 +6,13 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 
+from tqdm import tqdm
+
 import parse_log
 from repl_checker_dataclass import jinja2_template_from_string
 from system_state import PortMapper, ServerState, SystemState
 
 this_dir = os.path.realpath(os.path.dirname(__file__))
-
-logging.basicConfig(
-    format='%(levelname)-8s %(message)s',
-    level=logging.INFO,
-    datefmt='%Y-%m-%d %H:%M:%S')
 
 
 def parse_args():
@@ -46,6 +43,11 @@ def parse_args():
         '--keep-temp-spec',
         action='store_true',
         help='Save generated spec, as file "Trace.tla"')
+
+    parser.add_argument(
+        '-q', '--quiet',
+        action='store_true',
+        help="Don't log each parsed action (runs much faster)")
 
     return parser.parse_args()
 
@@ -131,14 +133,22 @@ def run_tlc(dir_path):
 
     tlc = os.path.join(tla_install_dir, 'bin/tlc')
     trace_tla = os.path.join(dir_path, 'Trace.tla')
+    logging.info('Starting TLC')
     run([tlc, trace_tla], cwd=this_dir)
+    logging.info('Finished TLC')
 
 
 def main(args):
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        level=logging.INFO if args.quiet else logging.DEBUG,
+        datefmt='%Y-%m-%d %H:%M:%S')
+
     logging.info('Reading logs')
     merged_logs = list(parse_log.merge_log_streams(args.logfile))
     servers = set(log_line.obj['host'] for log_line in merged_logs)
-    logging.info(f'Servers: {servers}')
+    logging.info(f"{len(merged_logs)} TLA+ trace events")
+    logging.info(f"Servers: {' '.join(servers)}")
 
     # TODO: How to get the initial state from the spec? Can TLC help?
     n_servers = len(servers)
@@ -157,12 +167,18 @@ def main(args):
     port_mapper = PortMapper()
     oplog_index_mapper = parse_log.OplogIndexMapper()
 
-    for i, log_line in enumerate(merged_logs, start=1):
+    logging.info('Generating states')
+    # tqdm shows a progress bar.
+    for i, log_line in enumerate(tqdm(merged_logs), start=1):
         log_event = parse_log.parse_log_line(
             log_line, port_mapper, oplog_index_mapper)
-        logging.info(
-            f'{"Initial" if i == 1 else "Current"} state:\n{current_state.pretty()}')
-        logging.info(f'Log line #{i}:\n{log_event.pretty()}')
+
+        if not args.quiet:
+            logging.info(
+                f'{"Initial" if i == 1 else "Current"} state:'
+                f'\n{current_state.pretty()}')
+            logging.info(f'Log line #{i}:\n{log_event.pretty()}')
+
         trace.append(current_state)
 
         # Generate next state.
@@ -171,7 +187,8 @@ def main(args):
         max_client_write_size = max(max_client_write_size,
                                     current_state.max_oplog_len - max_oplog_len)
 
-    logging.info(f'Final state:\n{current_state.pretty()}')
+    if not args.quiet:
+        logging.info(f'Final state:\n{current_state.pretty()}')
 
     tla_template = jinja2_template_from_string(
         open(os.path.join(this_dir, 'Trace.tla.jinja2')).read())
@@ -190,7 +207,7 @@ def main(args):
 
     # Creates temporary files if args.keep_temp_spec is False.
     with TLCInputs(args.keep_temp_spec) as inputs:
-        print(f'Generating {inputs.spec.name}')
+        logging.info(f'Generating {inputs.spec.name}')
         inputs.spec.write(tla_out)
         inputs.spec.flush()
 
@@ -200,7 +217,7 @@ def main(args):
         try:
             shutil.copy(args.specfile, inputs.dir_path)
             if args.keep_temp_spec:
-                print(f'Copied {args.specfile} to {inputs.dir_path}')
+                logging.info(f'Copied {args.specfile} to {inputs.dir_path}')
 
         except shutil.SameFileError:
             # --keep-temp-spec with a spec file in the current directory.
@@ -210,7 +227,7 @@ def main(args):
             run_tlc(inputs.dir_path)
             return 0
         except subprocess.SubprocessError as exc:
-            print(exc)
+            logging.error(exc)
             return exc.returncode
 
 
