@@ -45,6 +45,11 @@ def parse_args():
         help='Save generated spec, as file "Trace.tla"')
 
     parser.add_argument(
+        '--heap-size-gb',
+        type=int,
+        help='Java heap size for TLC, in gigabytes')
+
+    parser.add_argument(
         '-q', '--quiet',
         action='store_true',
         help="Don't log each parsed action (runs much faster)")
@@ -116,7 +121,7 @@ class TLCInputs:
             self._tmp_dir.cleanup()
 
 
-def run_tlc(dir_path):
+def run_tlc(dir_path, heap_size_gb):
     tla_bin_dir = os.path.join(this_dir, 'tla-bin')
     tla_install_dir = os.path.join(this_dir, '.tla-bin-install')
     download = os.path.join(tla_bin_dir, 'download_or_update_tla.sh')
@@ -125,16 +130,21 @@ def run_tlc(dir_path):
     if not os.path.exists(os.path.join(this_dir, download)):
         raise Exception("Must 'git submodule init' to install tla-bin")
 
-    def run(cmd, cwd):
-        subprocess.check_call(cmd, cwd=cwd)
+    def run(cmd, cwd, env=None):
+        subprocess.check_call(cmd, cwd=cwd, env=env)
 
     run([download], cwd=tla_bin_dir)
     run([install, tla_install_dir], cwd=tla_bin_dir)
 
     tlc = os.path.join(tla_install_dir, 'bin/tlc')
     trace_tla = os.path.join(dir_path, 'Trace.tla')
+    if heap_size_gb is not None:
+        tlc_env = {'JAVA_OPTS': f'-Xmx{heap_size_gb}g'}
+    else:
+        tlc_env = None
+
     logging.info('Starting TLC')
-    run([tlc, trace_tla], cwd=this_dir)
+    run([tlc, trace_tla], cwd=this_dir, env=tlc_env)
     logging.info('Finished TLC')
 
 
@@ -224,7 +234,7 @@ def main(args):
             pass
 
         try:
-            run_tlc(inputs.dir_path)
+            run_tlc(inputs.dir_path, args.heap_size_gb)
             return 0
         except subprocess.SubprocessError as exc:
             logging.error(exc)
