@@ -45,6 +45,10 @@ def parse_args():
         help='Save generated spec, as file "Trace.tla"')
 
     parser.add_argument(
+        '--tla2tools-jar',
+        help='Path to tla2tools.jar (otherwise it will be downloaded)')
+
+    parser.add_argument(
         '--heap-size-gb',
         type=int,
         help='Java heap size for TLC, in gigabytes')
@@ -121,7 +125,7 @@ class TLCInputs:
             self._tmp_dir.cleanup()
 
 
-def run_tlc(dir_path, heap_size_gb):
+def run_tlc(dir_path, tla2tools_jar, heap_size_gb):
     tla_bin_dir = os.path.join(this_dir, 'tla-bin')
     tla_install_dir = os.path.join(this_dir, '.tla-bin-install')
     download = os.path.join(tla_bin_dir, 'download_or_update_tla.sh')
@@ -133,7 +137,11 @@ def run_tlc(dir_path, heap_size_gb):
     def run(cmd, cwd, env=None):
         subprocess.check_call(cmd, cwd=cwd, env=env)
 
-    run([download], cwd=tla_bin_dir)
+    if tla2tools_jar:
+        shutil.copy(tla2tools_jar, os.path.join(tla_bin_dir, 'tla2tools.jar'))
+    else:
+        run([download], cwd=tla_bin_dir)
+
     run([install, tla_install_dir], cwd=tla_bin_dir)
 
     tlc = os.path.join(tla_install_dir, 'bin/tlc')
@@ -234,7 +242,7 @@ def main(args):
             pass
 
         try:
-            run_tlc(inputs.dir_path, args.heap_size_gb)
+            run_tlc(inputs.dir_path, args.tla2tools_jar, args.heap_size_gb)
             return 0
         except subprocess.SubprocessError as exc:
             logging.error(exc)
