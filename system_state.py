@@ -178,7 +178,7 @@ def python_to_tla(data):
     if isinstance(data, Mapping):
         def gen():
             for key, value in data.items():
-                yield f'{key} |-> {value}'
+                yield f'{key} |-> {python_to_tla(value)}'
 
         return f'[{", ".join(gen())}]'
 
