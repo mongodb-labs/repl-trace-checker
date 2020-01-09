@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import enum
 from collections.abc import Generator, Mapping, Sequence
-from typing import Tuple, Optional
+from typing import Optional, Set, Tuple
 
 from repl_checker_dataclass import repl_checker_dataclass
 
@@ -72,11 +72,14 @@ def _tla_variable():
 class SystemState:
     n_servers: int
 
-    globalCurrentTerm: int = _raft_mongo_variable()
-    """The maximum term known by any server."""
-
     action: str = _tla_variable()
     """The TLA+ action that led to this state."""
+
+    committedEntries: Set[CommitPoint] = _raft_mongo_variable()
+    """The set of log entries that have been acknowledged as committed."""
+
+    currentTerm: Tuple[int] = _raft_mongo_variable()
+    """The term number known by each server."""
 
     log: Tuple[Tuple[OplogEntry]] = _raft_mongo_variable()
     """A list of oplogs, one per server."""
@@ -95,9 +98,8 @@ class SystemState:
         assert len(self.state) == self.n_servers
         assert len(self.commitPoint) == self.n_servers
 
-    __pretty_template__ = """globalCurrentTerm={{ globalCurrentTerm }}
-{% for i in range(n_servers) -%}
-server {{ i }}: state={{ state[i] }}, commit point={{ commitPoint[i] }},
+    __pretty_template__ = """{% for i in range(n_servers) -%}
+server {{ i }}: state={{ state[i] }}, term={{ currentTerm[i] }}, commit point={{ commitPoint[i] }},
 {%- if log[i] %}
  log={{ log[i] | oplog }}
 {%- else %}
@@ -166,5 +168,12 @@ def python_to_tla(data):
                 yield f'{key} |-> {value}'
 
         return f'[{", ".join(gen())}]'
+
+    if isinstance(data, set):
+        def gen():
+            for value in data:
+                yield python_to_tla(value)
+
+        return f'{{{", ".join(gen())}}}'
 
     raise TypeError(f'Cannot convert {data!r} to TLA+ notation')

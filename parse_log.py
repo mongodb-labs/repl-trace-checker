@@ -87,7 +87,7 @@ class LogEvent:
     """The action (in TLA+ spec terms) the server is taking."""
     server_id: int
     """The server's id (0-indexed)."""
-    term: int
+    currentTerm: int
     """The server's view of the term.
     
     NOTE: The implementation's term starts at -1, then increases to 1, then
@@ -188,15 +188,16 @@ def parse_log_line(log_line, port_mapper, oplog_index_mapper):
             term=commitPointOpTime.term,
             index=oplog_index_mapper.get_entry(commitPointOpTime).index)
 
-        return LogEvent(timestamp=log_line.timestamp,
-                        location=log_line.location,
-                        line=log_line.line,
-                        action=trace['action'],
-                        server_id=port_mapper.get_server_id(port),
-                        term=_parse_term(raft_mongo['term']['$numberLong']),
-                        state=ServerState[raft_mongo['serverState']],
-                        commitPoint=commitPoint,
-                        log=log)
+        return LogEvent(
+            timestamp=log_line.timestamp,
+            location=log_line.location,
+            line=log_line.line,
+            action=trace['action'],
+            server_id=port_mapper.get_server_id(port),
+            currentTerm=_parse_term(raft_mongo['term']['$numberLong']),
+            state=ServerState[raft_mongo['serverState']],
+            commitPoint=commitPoint,
+            log=log)
     except Exception:
         print(f'Exception at {log_line.location}: {log_line.line}',
               file=sys.stderr)
