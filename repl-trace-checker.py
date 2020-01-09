@@ -189,8 +189,10 @@ def main(args):
     oplog_index_mapper = parse_log.OplogIndexMapper()
 
     logging.info('Generating states')
-    # tqdm shows a progress bar.
-    for i, log_line in enumerate(tqdm(merged_logs), start=1):
+    # If quiet, just show progress bar with tqdm.
+    disable_tqdm = True if args.quiet else None
+    for i, log_line in enumerate(tqdm(merged_logs, disable=disable_tqdm),
+                                 start=1):
         log_event = parse_log.parse_log_line(
             log_line, port_mapper, oplog_index_mapper)
 
