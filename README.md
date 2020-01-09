@@ -1,8 +1,8 @@
 # MongoDB Replication Protocol Trace Checker
 
-Compare a sequence of messages from an actual MongoDB replica set with
-[Siyuan Zhou's TLA+ spec of MongoDB replication](https://github.com/visualzhou/mongo-repl-tla)
-to check whether the actual replica set's steps are permitted by the spec.
+Compare a sequence of state transitions logged by an actual MongoDB replica set with our
+[Raft-like TLA+ specification](https://github.com/mongodb/mongo/blob/master/src/mongo/db/repl/tla_plus/RaftMongo.tla)
+to check whether the replica set's behavior is permitted by the spec.
 
 ## Background
 
@@ -24,7 +24,7 @@ Specification with TLA+ and TLC.
 ## This project
 
 I want to check that an actual MongoDB replica set's series of state changes
-correspond to a sequence of steps in Siyuan Zhou's TLA+ spec, `RaftMongo.tla`.
+correspond to a sequence of steps in MongoDB's TLA+ spec, `RaftMongo.tla`.
 
 First I run mongod with extra tracing. Each time the server executes a step
 that is equivalent to one of the `RaftMongo.tla` actions (AppendOplog,
@@ -34,7 +34,7 @@ some writes, and stop the set.
 
 Next, I run a Python script reads all the replica set members' logs and
 constructs an execution trace, as follows. The script begins with the spec's
-initial state. (TODO: In fact the initial state is hardcoded in Python.)
+initial state.
 Then, for each log message from the replica set, the script
 creates the next state, which includes the changes expressed by the log
 message. For example, if Server 1 becomes primary, it logs that its role is now
@@ -53,13 +53,13 @@ creates a new TLA+ spec to check that this trace is permitted by
 * Build the most recent version of `mongod` and `mongo`.
 * Run the script included in this repository.
 ```
-./mongo --nodb sample-replica-set.js
+./mongo --nodb jstests/bulk_write.js
 ```
 
 **Run the checker**
 
 * Clone this repository
-* With Python 3.6 or later:
+* With Python 3.7 or later:
 
 ```
 python -m pip install -r requirements.txt
@@ -74,15 +74,15 @@ The script installs or updates the TLA+ tools and runs the model checker program
 TLC on the generated spec.
 
 Caveats:
-* If a mongod's log is split across several files, they must be merged in
-  chronological order into one file.
+* If a mongod's log is split across several files (for example, if it restarted
+  during the test), include all its log files.
 * The replica set must never be single-node (because single-node sets handle
   the commitPoint differently from the RaftMongo.tla spec). You must disable
   replsettest.js's default behavior of initializing a set with one node and then
-  adding the remainder of the nodes, see SERVER-45228.
-* Auth is not supported (it writes system.keys entries that are 
+  adding the remainder of the nodes. `bulk_write.js` handles this correctly.
+* Auth is not supported: it writes system.keys entries that are 
   majority-committed during initial sync as the replica set is initialized,
-  which violates RaftMongo.tla).
+  which violates RaftMongo.tla.
 
 **Debug**
 
@@ -114,8 +114,10 @@ and an error trace.
 ## Current status
 
 Trace logging is implemented in mongod as of commit f515d2ad on MongoDB's master 
-branch. The RaftMongo.tla spec requires small updates to match the trace; these
-are in progress. 
+branch. Only very simple behaviors such as the included `bulk_write.js` can
+pass trace-checking. More complex behaviors reveal mismatches between the spec
+and the implementation. This is the purpose of the project! However, we have
+decided to stop this experiment instead of fixing the discrepancies.
 
 [Sample output from the trace checker](./sample-output.txt).
 
