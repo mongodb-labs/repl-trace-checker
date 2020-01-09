@@ -1,6 +1,6 @@
 const rst = new ReplSetTest({
     nodes: [{}, {rsConfig: {priority: 0}}],
-    oplogSize: 999999,  // We don't model truncation in our specs, so disable it
+    oplogSize: 999999,  // Disable truncation.
     nodeOptions: {
         useLogFiles: true,
         setParameter: {
@@ -17,6 +17,9 @@ rst.startSet();
 assert.commandWorked(rst.nodes[0].getDB('admin').runCommand({
     replSetInitiate: rst.getReplSetConfig()}));
 
+// Don't write during initial sync. The replica set would appear to violate the
+// spec's rules for AdvanceCommitPoint, because initial-syncing nodes can
+// acknowledge oplog entries that don't yet appear in their oplogs.
 rst.awaitSecondaryNodes();
 const db = rst.getPrimary().getDB('test');
 const wc = {w: 'majority', wtimeout: 10000};
@@ -35,3 +38,4 @@ printjson(assert.commandWorked(db.runCommand({
 
 jsTestLog(`primary oplog`);
 rst.nodes[0].getDB('local').getCollection('oplog.rs').find().pretty().shellPrint();
+rst.stopSet(15, false, {noCleanData: true});
