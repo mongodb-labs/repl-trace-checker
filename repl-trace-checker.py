@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import requests
 import shutil
 import subprocess
 import sys
@@ -150,34 +151,35 @@ class TLCInputs:
             self._tmp_dir.cleanup()
 
 
-def run_tlc(dir_path, tla2tools_jar, heap_size_gb):
-    tla_bin_dir = os.path.join(this_dir, 'tla-bin')
-    tla_install_dir = os.path.join(this_dir, '.tla-bin-install')
-    download = os.path.join(tla_bin_dir, 'download_or_update_tla.sh')
-    install = os.path.join(tla_bin_dir, 'install.sh')
+def run_tlc(tla2tools_jar, heap_size_gb):
+    tla_install_dir = os.path.join(this_dir, 'tla-bin')
+    os.makedirs(tla_install_dir, exist_ok=True)
+    tools_install = os.path.join(tla_install_dir, 'tla2tools.jar')
 
-    if not os.path.exists(os.path.join(this_dir, download)):
-        raise Exception("Must 'git submodule init' to install tla-bin")
+    def run_java(cmd):
+        opts = ['-XX:+UseParallelGC']
+        if heap_size_gb is not None:
+            opts.append(f'-Xmx{heap_size_gb}g')
 
-    def run(cmd, cwd, env=None):
-        subprocess.check_call(cmd, cwd=cwd, env=env)
+        java_cmd = ['java'] + opts + ['-cp', f'{tla_install_dir}/*'] + cmd
+        logging.debug(' '.join(java_cmd))
+        subprocess.check_call(java_cmd, cwd=this_dir)
 
     if tla2tools_jar:
-        shutil.copy(tla2tools_jar, os.path.join(tla_bin_dir, 'tla2tools.jar'))
+        shutil.copy(tla2tools_jar, tools_install)
     else:
-        run([download], cwd=tla_bin_dir)
+        # Releases are at tla.msr-inria.inria.fr/tlatoolbox/dist/tla2tools.jar
+        # but we want nightlies.
+        r = requests.get('https://nightly.tlapl.us/dist/tla2tools.jar',
+                         stream=True)
 
-    run([install, tla_install_dir], cwd=tla_bin_dir)
+        with open(tools_install, 'wb') as fd:
+            for chunk in r.iter_content(chunk_size=128):
+                fd.write(chunk)
 
-    tlc = os.path.join(tla_install_dir, 'bin/tlc')
-    trace_tla = os.path.join(dir_path, 'Trace.tla')
-    if heap_size_gb is not None:
-        tlc_env = {'JAVA_OPTS': f'-Xmx{heap_size_gb}g'}
-    else:
-        tlc_env = None
-
+    # Log start / end so we can calculate duration from log timestamps.
     logging.info('Starting TLC')
-    run([tlc, trace_tla], cwd=this_dir, env=tlc_env)
+    run_java(['tlc2.TLC', 'Trace.tla'])
     logging.info('Finished TLC')
 
 
@@ -270,7 +272,8 @@ def main(args):
             pass
 
         try:
-            run_tlc(inputs.dir_path, args.tla2tools_jar, args.heap_size_gb)
+            run_tlc(tla2tools_jar=args.tla2tools_jar,
+                    heap_size_gb=args.heap_size_gb)
             return 0
         except subprocess.SubprocessError as exc:
             logging.error(exc)

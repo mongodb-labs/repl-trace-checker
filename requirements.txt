@@ -1,3 +1,4 @@
 jinja2
 orjson
 tqdm
+requests
