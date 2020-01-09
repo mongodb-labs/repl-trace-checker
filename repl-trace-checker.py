@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 import parse_log
 from repl_checker_dataclass import jinja2_template_from_string
-from system_state import PortMapper, ServerState, SystemState
+from system_state import CommitPoint, PortMapper, ServerState, SystemState
 
 this_dir = os.path.realpath(os.path.dirname(__file__))
 
@@ -62,27 +62,50 @@ def parse_args():
 
 
 def update_state(current_state, log_event):
+    if log_event.commitPoint.is_null():
+        committed = current_state.committedEntries.copy()
+    else:
+        new_entry = current_state.oplog_entry_at_commit_point(
+            log_event.server_id, log_event.commitPoint)
+
+        committed = current_state.committedEntries | {
+            CommitPoint(term=entry.term, index=entry.index)
+            for entry in new_entry.get_complete_log()
+        }
+
     # current_state.log is a tuple like:
     #
     #    (server 1's oplog, server 2's oplog, server 3's oplog)
     #
     # Same for state and commitPoint. Update the value in each of these tuples
     # for log_event's server.
-    committed = current_state.committedEntries.union({log_event.commitPoint})
+    _default = object()
 
-    def update(variable_name):
+    def update(variable_name, other_nodes=_default):
         """In a list of values per server, replace the value for one server."""
-        next_values = list(getattr(current_state, variable_name))
+        if other_nodes == _default:
+            next_values = list(getattr(current_state, variable_name))
+        else:
+            next_values = [other_nodes] * current_state.n_servers
+
         next_values[log_event.server_id] = getattr(log_event, variable_name)
         return tuple(next_values)
+
+    if log_event.action == 'BecomePrimaryByMagic':
+        # In RaftMongo.tla voters update their terms and step down instantly.
+        currentTerm = update('currentTerm', other_nodes=log_event.currentTerm)
+        state = update('state', other_nodes=ServerState.Follower)
+    else:
+        currentTerm = update('currentTerm')
+        state = update('state')
 
     return SystemState(
         n_servers=current_state.n_servers,
         committedEntries=committed,
-        currentTerm=update('currentTerm'),
+        currentTerm=currentTerm,
         action=log_event.action,
         log=update('log'),
-        state=update('state'),
+        state=state,
         commitPoint=update('commitPoint'),
         serverLogLocation=log_event.location)
 

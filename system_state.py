@@ -56,6 +56,9 @@ class CommitPoint:
     term: int
     index: int
 
+    def is_null(self):
+        return self.term == 0 and self.index == 0
+
     def to_tla(self):
         return python_to_tla(dataclasses.asdict(self))
 
@@ -97,6 +100,16 @@ class SystemState:
         assert len(self.log) == self.n_servers
         assert len(self.state) == self.n_servers
         assert len(self.commitPoint) == self.n_servers
+
+    def oplog_entry_at_commit_point(self, server_id, commit_point):
+        oplog = self.log[server_id]
+        entry = oplog[commit_point.index - 1]
+        assert entry.term == commit_point.term, \
+            (f"Server {server_id} oplog entry at 1-based index"
+             f" {commit_point.index} has term {entry.term}, commit point term"
+             f" is {commit_point.term}")
+
+        return entry
 
     __pretty_template__ = """{% for i in range(n_servers) -%}
 server {{ i }}: state={{ state[i] }}, term={{ currentTerm[i] }}, commit point={{ commitPoint[i] }},
