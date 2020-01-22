@@ -63,23 +63,12 @@ def parse_args():
 
 
 def update_state(current_state, log_event):
-    if log_event.commitPoint.is_null():
-        committed = current_state.committedEntries.copy()
-    else:
-        new_entry = current_state.oplog_entry_at_commit_point(
-            log_event.server_id, log_event.commitPoint)
-
-        committed = current_state.committedEntries | {
-            CommitPoint(term=entry.term, index=entry.index)
-            for entry in new_entry.get_complete_log()
-        }
-
     # current_state.log is a tuple like:
     #
     #    (server 1's oplog, server 2's oplog, server 3's oplog)
     #
-    # Same for state and commitPoint. Update the value in each of these tuples
-    # for log_event's server.
+    # Same for current_state.state and current_state.commitPoint. Update the
+    # value in each of these tuples for log_event's server.
     _default = object()
 
     def update(variable_name, other_nodes=_default):
@@ -91,6 +80,27 @@ def update_state(current_state, log_event):
 
         next_values[log_event.server_id] = getattr(log_event, variable_name)
         return tuple(next_values)
+
+    new_log = update('log')
+    new_commit = log_event.commitPoint
+    if new_commit.is_null():
+        committed = current_state.committedEntries.copy()
+    else:
+        # The LearnCommitPointWithTermCheck action allows a node to learn a
+        # commit point past its current oplog, so find the new commit point's
+        # index by reading the longest oplog.
+        longest_log = max(new_log, key=lambda log: len(log))
+        committed_entry = longest_log[new_commit.index - 1]
+        assert committed_entry.term == new_commit.term, \
+            (f"Server {log_event.server_id} oplog entry at 1-based index"
+             f" {new_commit.index} has term {committed_entry.term}, commit"
+             f" point term is {new_commit.term}")
+
+        # Add prefix-committed entries to set of committed entries.
+        committed = current_state.committedEntries | {
+            CommitPoint(term=entry.term, index=entry.index)
+            for entry in committed_entry.get_complete_log()
+        }
 
     if log_event.action == 'BecomePrimaryByMagic':
         # In RaftMongo.tla voters update their terms and step down instantly.
@@ -105,7 +115,7 @@ def update_state(current_state, log_event):
         committedEntries=committed,
         currentTerm=currentTerm,
         action=log_event.action,
-        log=update('log'),
+        log=new_log,
         state=state,
         commitPoint=update('commitPoint'),
         serverLogLocation=log_event.location)
