@@ -1,7 +1,7 @@
 # MongoDB Replication Protocol Trace Checker
 
 Compare a sequence of state transitions logged by an actual MongoDB replica set with our
-[Raft-like TLA+ specification](https://github.com/mongodb/mongo/blob/master/src/mongo/db/repl/tla_plus/RaftMongo.tla)
+[Raft-like TLA+ specification](https://github.com/mongodb/mongo/blob/master/src/mongo/db/repl/tla_plus/RaftMongo/RaftMongo.tla)
 to check whether the replica set's behavior is permitted by the spec.
 
 ## Background
@@ -50,7 +50,9 @@ creates a new TLA+ spec to check that this trace is permitted by
 
 **Run a replica set**
 
-* Build the most recent version of `mongod` and `mongo`.
+* Clone this repository
+* In a separate directory, check out github.com/mongodb/mongo at revision 8a4dba3b.
+* Build `mongod` and `mongo`.
 * Run the script included in this repository.
 ```
 ./mongo --nodb jstests/bulk_write.js
@@ -58,15 +60,14 @@ creates a new TLA+ spec to check that this trace is permitted by
 
 **Run the checker**
 
-* Clone this repository
 * With Python 3.7 or later:
 
 ```
 python -m pip install -r requirements.txt
-python repl-trace-checker.py <LOG1> <LOG2> ... <SPEC>
+python repl-trace-checker.py <LOG1> <LOG2> ... <MONGO_CHECKOUT>/src/mongodb/repl/tla_plus/RaftMongo/RaftMongo.tla
 ```
 * Replace LOG1, LOG2, etc. with the `mongod.log` file of each replica.
-* Replace SPEC with the path to RaftMongo.tla.
+* Replace MONGO_CHECKOUT with the path to the mongodb repository checkout.
 
 The script parses the mongod log files and generates a TLA+ spec which checks
 that the trace represented by the log files is permitted by `RaftMongo.tla`.
