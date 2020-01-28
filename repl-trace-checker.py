@@ -225,17 +225,22 @@ def main(args):
 
     logging.info('Generating states')
     # If quiet, just show progress bar with tqdm.
-    disable_tqdm = True if args.quiet else None
+    disable_tqdm = True if not args.quiet else None
     for i, log_line in enumerate(tqdm(merged_logs, disable=disable_tqdm),
                                  start=1):
-        log_event = parse_log.parse_log_line(
-            log_line, port_mapper, oplog_index_mapper)
+        try:
+            log_event = parse_log.parse_log_line(
+                log_line, port_mapper, oplog_index_mapper)
+        except Exception:
+            logging.exception("Parsing log")
+            break
 
         if not args.quiet:
             logging.info(
                 f'{"Initial" if i == 1 else "Current"} state:'
                 f'\n{current_state.pretty()}')
-            logging.info(f'Log line #{i}:\n{log_event.pretty()}')
+            logging.info(f'Log line #{i}/{len(merged_logs)}:'
+                         f'\n{log_event.pretty()}')
 
         trace.append(current_state)
 
